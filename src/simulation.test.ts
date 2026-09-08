@@ -68,6 +68,102 @@ describe("City Pursuit simulation", () => {
       Math.hypot(boosted.player.vel.x, boosted.player.vel.z),
     ).toBeGreaterThan(Math.hypot(normal.player.vel.x, normal.player.vel.z));
   });
+  it("ordinary player speed clears police cruise while boost reaches a second tier", () => {
+    const normal = createState();
+    normal.traffic = [];
+    normal.police = [];
+    normal.player.pos = { x: 66, z: 66 };
+    advance(normal, go, 4);
+    const normalSpeed = Math.hypot(normal.player.vel.x, normal.player.vel.z);
+    const boosted = createState();
+    boosted.traffic = [];
+    boosted.police = [];
+    boosted.player.pos = { x: 66, z: 66 };
+    advance(boosted, { ...go, boost: true }, 4);
+    const boostedSpeed = Math.hypot(boosted.player.vel.x, boosted.player.vel.z);
+    expect(normalSpeed).toBeGreaterThan(15);
+    expect(boostedSpeed).toBeGreaterThan(normalSpeed + 4);
+  });
+  it("pushes an NPC over several frames without reversing player momentum", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0]];
+    s.police = [];
+    s.player.pos = { x: 0, z: 30 };
+    s.player.vel = { x: 0, z: -8 };
+    s.traffic[0].pos = { x: 0, z: 26.5 };
+    s.traffic[0].vel = { x: 0, z: 0 };
+    const before = s.traffic[0].pos.z;
+    step(s, go, 1 / 60);
+    const first = s.traffic[0].pos.z;
+    advance(s, go, 0.25);
+    expect(first).toBeLessThan(before);
+    expect(s.traffic[0].pos.z).toBeLessThan(before - 1);
+    expect(s.traffic[0].pos.z).toBeLessThan(first);
+    expect(s.player.vel.z).toBeLessThan(0);
+  });
+  it("holds a low-speed head-on push through NPC and police traffic", () => {
+    for (const kind of ["npc", "police"] as const) {
+      const s = createState();
+      s.traffic = kind === "npc" ? [s.traffic[0]] : [];
+      s.police = kind === "police" ? [s.police[0]] : [];
+      s.player.pos = { x: 0, z: 30 };
+      s.player.vel = { x: 0, z: -1 };
+      const target = kind === "npc" ? s.traffic[0] : s.police[0];
+      target.pos = { x: 0, z: 26.5 };
+      target.vel = { x: 0, z: 0 };
+      advance(s, go, 1.5);
+      expect(s.player.pos.z).toBeLessThan(20);
+      expect(target.pos.z).toBeLessThan(20);
+      expect(s.player.vel.z).toBeLessThan(0);
+      expect(s.player.damage).toBeLessThan(100);
+    }
+  });
+  it("pushes a police car and keeps its waypoint pursuit recoverable", () => {
+    const s = createState();
+    s.traffic = [];
+    s.police = [s.police[0]];
+    s.wanted = true;
+    s.player.pos = { x: 0, z: 30 };
+    s.player.vel = { x: 0, z: -8 };
+    s.police[0].pos = { x: 0, z: 26.5 };
+    const before = s.police[0].pos.z;
+    step(s, { ...go, up: false }, 1 / 60);
+    expect(s.police[0].pos.z).toBeLessThan(before);
+    const displaced = { ...s.police[0].pos };
+    advance(s, { ...go, up: false }, 0.4);
+    expect(Math.hypot(s.police[0].pos.x - displaced.x, s.police[0].pos.z - displaced.z)).toBeGreaterThan(0);
+    expect(isOnRoad(s.police[0].pos)).toBe(true);
+  });
+  it("keeps a pushed vehicle inside the world boundary", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0]];
+    s.police = [];
+    s.player.pos = { x: 72, z: 0 };
+    s.player.heading = Math.PI / 2;
+    s.player.vel = { x: 8, z: 0 };
+    s.traffic[0].pos = { x: 75, z: 0 };
+    s.traffic[0].vel = { x: 0, z: 0 };
+    advance(s, go, 0.5);
+    expect(s.traffic[0].pos.x).toBeLessThanOrEqual(76);
+    expect(isOnRoad(s.traffic[0].pos)).toBe(true);
+  });
+  it("does not separate a vehicle through a building-side road boundary", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0]];
+    s.police = [];
+    s.player.pos = { x: 0.5, z: 11 };
+    s.player.heading = Math.PI / 2;
+    s.player.vel = { x: 1, z: 0 };
+    s.traffic[0].pos = { x: 3.8, z: 11 };
+    s.traffic[0].vel = { x: 0, z: 0 };
+    advance(s, go, 0.2);
+    expect(s.player.damage).toBeGreaterThan(0);
+    expect(isOnRoad(s.player.pos)).toBe(true);
+    expect(isOnRoad(s.traffic[0].pos)).toBe(true);
+    expect(s.traffic[0].pos.x).toBeLessThan(4);
+    expect(s.player.pos.x).toBeLessThanOrEqual(76);
+    expect(s.traffic[0].pos.x).toBeLessThanOrEqual(76);
+  });
   it("building blocks cannot be entered", () => {
     const s = createState();
     s.player.pos = { x: 0, z: 0 };

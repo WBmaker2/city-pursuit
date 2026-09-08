@@ -18,6 +18,9 @@ export type Car = {
   lane: number;
   isPolice?: boolean;
   waypoint?: Vec;
+  /** Short-lived arcade shove, applied after AI steering each frame. */
+  impact?: Vec;
+  impactTime?: number;
 };
 export type Checkpoint = { pos: Vec; radius: number; reached: boolean };
 export type GameState = {
@@ -177,7 +180,9 @@ function drive(c: Car, i: Input, dt: number) {
     signed = c.vel.x * f.x + c.vel.z * f.z,
     brake = i.down && signed > 0.3,
     throttle = i.up ? 1 : i.down && signed <= 0.3 ? -0.55 : 0,
-    acc = c.isPolice ? 12 : i.boost && i.up ? 27 : 18;
+    // With drag this reaches ~19.5u/s in ordinary driving (police cruise at
+    // 15), while boost has a clear second tier without feeling weightless.
+    acc = c.isPolice ? 12 : i.boost && i.up ? 36 : 28;
   c.vel.x += f.x * throttle * acc * dt;
   c.vel.z += f.z * throttle * acc * dt;
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0),
@@ -188,7 +193,7 @@ function drive(c: Car, i: Input, dt: number) {
   c.vel.x *= Math.max(0, 1 - drag * dt);
   c.vel.z *= Math.max(0, 1 - drag * dt);
   if (brake && speed < 0.5) c.vel.x = c.vel.z = 0;
-  const max = c.isPolice ? 20 : i.boost && i.up ? 32 : MAX_SPEED,
+  const max = c.isPolice ? 20 : i.boost && i.up ? 34 : MAX_SPEED,
     m = Math.hypot(c.vel.x, c.vel.z);
   if (m > max) {
     c.vel.x *= max / m;
@@ -196,6 +201,35 @@ function drive(c: Car, i: Input, dt: number) {
   }
   c.pos.x += c.vel.x * dt;
   c.pos.z += c.vel.z * dt;
+}
+function applyImpacts(cars: Car[], dt: number) {
+  for (const car of cars) {
+    const impact = car.impact;
+    if (!impact || (car.impactTime ?? 0) <= 0) {
+      car.impact = undefined;
+      car.impactTime = 0;
+      continue;
+    }
+    const previous = { ...car.pos };
+    car.pos.x += impact.x * dt;
+    car.pos.z += impact.z * dt;
+    const candidate = {
+      x: clamp(car.pos.x, -76, 76),
+      z: clamp(car.pos.z, -76, 76),
+    };
+    if (blocked(previous, candidate) || !isOnRoad(candidate)) {
+      car.pos = previous;
+      car.impact = undefined;
+      car.impactTime = 0;
+      car.vel = { x: 0, z: 0 };
+      continue;
+    }
+    car.pos = candidate;
+    if (car.isPolice) car.waypoint = undefined;
+    const decay = Math.pow(0.72, dt * 60);
+    car.impact = { x: impact.x * decay, z: impact.z * decay };
+    car.impactTime = Math.max(0, (car.impactTime ?? 0) - dt);
+  }
 }
 function nextWaypoint(p: Car, player: Car) {
   const at = node(p.pos),
@@ -212,6 +246,10 @@ function nextWaypoint(p: Car, player: Car) {
   return at;
 }
 function police(p: Car, player: Car, dt: number) {
+  if ((p.impactTime ?? 0) > 0) {
+    p.vel = { x: 0, z: 0 };
+    return;
+  }
   let w = p.waypoint;
   if (!w || dist(p.pos, w) < 0.01) w = nextWaypoint(p, player);
   p.waypoint = w;
@@ -249,24 +287,76 @@ function collide(player: Car, other: Car, s: GameState) {
     nx = dx / d;
     nz = dz / d;
   }
-  const impactDirection = { x: -dx, z: -dz };
+  const impactDirection = { x: -nx, z: -nz };
+  const playerBefore = { ...player.pos };
+  const otherBefore = { ...other.pos };
   const push = (min - d) / 2;
-  player.pos.x += nx * push;
-  player.pos.z += nz * push;
-  other.pos.x -= nx * push;
-  other.pos.z -= nz * push;
-  if (!isOnRoad(player.pos)) player.pos.x = grid(player.pos.x);
-  if (!isOnRoad(other.pos)) other.pos.x = grid(other.pos.x);
+  const playerCandidate = {
+    x: clamp(player.pos.x + nx * push, -76, 76),
+    z: clamp(player.pos.z + nz * push, -76, 76),
+  };
+  const playerFullCandidate = {
+    x: clamp(player.pos.x + nx * (min - d), -76, 76),
+    z: clamp(player.pos.z + nz * (min - d), -76, 76),
+  };
+  const otherCandidate = {
+    x: clamp(other.pos.x - nx * push, -76, 76),
+    z: clamp(other.pos.z - nz * push, -76, 76),
+  };
+  const valid = (from: Vec, to: Vec) => isOnRoad(to) && !blocked(from, to);
+  const playerCanSeparate = valid(playerBefore, playerCandidate);
+  const playerCanFullSeparate = valid(playerBefore, playerFullCandidate);
+  const otherCanSeparate = valid(otherBefore, otherCandidate);
+  if (playerCanSeparate && otherCanSeparate) {
+    player.pos = playerCandidate;
+    other.pos = otherCandidate;
+  } else if (playerCanSeparate) {
+    // A building or boundary may trap the struck car. Give the player the
+    // available half of the separation instead of pushing into the obstacle.
+    player.pos = playerCanFullSeparate ? playerFullCandidate : playerCandidate;
+    other.pos = otherBefore;
+  } else if (otherCanSeparate) {
+    player.pos = playerBefore;
+    other.pos = otherCandidate;
+  } else {
+    player.pos = playerBefore;
+    other.pos = otherBefore;
+  }
   const playerSpeed = Math.hypot(player.vel.x, player.vel.z);
   const otherSpeed = Math.hypot(other.vel.x, other.vel.z);
   const sameDirection = player.vel.x * other.vel.x + player.vel.z * other.vel.z > 0;
   const movingPlayer = d < 0.25
     ? playerSpeed > 0.5 && !(sameDirection && otherSpeed > playerSpeed + 0.5)
     : dotToward(player.vel, impactDirection) > 0.5;
+  // Transfer forward momentum to the struck vehicle. The impulse is kept
+  // outside `vel` so traffic AI cannot erase it on its next steering update.
+  const approach = Math.max(
+    0,
+    dotToward(
+      { x: player.vel.x - other.vel.x, z: player.vel.z - other.vel.z },
+      impactDirection,
+    ),
+  );
+  if (approach > 0.2) {
+    const shove = Math.min(
+      other.isPolice ? 15 : 12,
+      approach * 0.9 + (playerSpeed > 0.6 ? 1.1 : 0),
+    );
+    other.impact = {
+      x: impactDirection.x / Math.max(1e-6, Math.hypot(impactDirection.x, impactDirection.z)) * shove,
+      z: impactDirection.z / Math.max(1e-6, Math.hypot(impactDirection.x, impactDirection.z)) * shove,
+    };
+    other.impactTime = Math.max(other.impactTime ?? 0, 0.55);
+  }
   if (s.collisionTimer <= 0) {
     player.damage += 18;
-    player.vel.x *= -0.35;
-    player.vel.z *= -0.35;
+    // Preserve forward momentum; only remove velocity driving into the other
+    // car. This lets a held throttle gradually break a low-speed contact.
+    const toward = dotToward(player.vel, impactDirection);
+    if (toward > 0) {
+      player.vel.x -= (impactDirection.x / Math.max(1e-6, Math.hypot(impactDirection.x, impactDirection.z))) * toward * 0.35;
+      player.vel.z -= (impactDirection.z / Math.max(1e-6, Math.hypot(impactDirection.x, impactDirection.z))) * toward * 0.35;
+    }
     s.score = Math.max(0, s.score - 50);
     s.collisionTimer = 0.75;
     return movingPlayer;
@@ -309,6 +399,7 @@ export function step(s: GameState, input: Input, dt: number): GameState {
   updateTraffic(s.traffic, s.player, dt, (from, to) => !blocked(from, to) && isOnRoad(to), s.police);
   if (s.wanted) for (const p of s.police) police(p, s.player, dt);
   else for (const p of s.police) p.vel = { x: 0, z: 0 };
+  applyImpacts([...s.traffic, ...s.police], dt);
   const b = bridges.get(s);
   b?.syncPosition(s.player.pos.x, s.player.pos.z);
   b?.syncCars(

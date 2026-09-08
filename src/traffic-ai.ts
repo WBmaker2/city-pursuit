@@ -5,6 +5,8 @@ export type TrafficCar = {
   heading: number;
   lane: number;
   isPolice?: boolean;
+  impact?: TrafficVec;
+  impactTime?: number;
 };
 
 type Snapshot = { car: TrafficCar; pos: TrafficVec; vel: TrafficVec; id: number };
@@ -87,6 +89,10 @@ export function updateTraffic(
   const obstacleSnapshots = obstacles.map((car, id) => ({ car, pos: { ...car.pos }, vel: { ...car.vel }, id: -1000 - id }));
   const decisions = new Map<TrafficCar, Decision>();
   for (const a of all) {
+    if ((a.car.impactTime ?? 0) > 0) {
+      decisions.set(a.car, { speed: 0, pos: a.pos, waiting: true });
+      continue;
+    }
     const rememberedHeading = intentHeading.get(a.car) ?? a.car.heading;
     intentHeading.set(a.car, rememberedHeading);
     const f = { x: Math.sin(rememberedHeading), z: Math.cos(rememberedHeading) };

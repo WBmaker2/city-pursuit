@@ -73,3 +73,12 @@ git push -u origin main
 - 커밋 SHA: `16cb10d`
 - Pages Actions 실행: [34221958775](https://github.com/WBmaker2/city-pursuit/actions/runs/34221958775), 성공
 - 공개 URL: [https://wbmaker2.github.io/city-pursuit/](https://wbmaker2.github.io/city-pursuit/), HTTP 200 확인
+
+### 2026-09-08 플레이어 파워 후속 릴리스
+
+- 일반 주행 실제 `19.464u/s`, 경찰 순항 `15u/s`보다 빠른 가속과 부스트 상한 추가
+- 저속 held-W 정면 충돌에서 NPC·경찰을 여러 프레임 밀어내고 플레이어 전진 운동량 유지
+- 충돌 분리 후보의 도로·건물·경계 검증과 건물 측면·경계 회귀 테스트 추가
+- production preview QA: NPC `z=30→15.3`, 경찰 `z=30→15.0`, 상대 `z=26.5→11.5/11.2`, damage `36`, player alive
+- production preview QA: W+Shift `25.0253u/s` (`200.2024km/h`), damage `0`; Shift 해제 후 S `0.5초` 제동으로 `0.6855u/s`, history에 전진 운동량 유지 표시
+- `npm test` 38/38, `npm run build` 성공
