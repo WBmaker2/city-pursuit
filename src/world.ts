@@ -173,7 +173,7 @@ export function carMesh(police = false, paint = 0x13c8c5) {
   }
   if (police) {
     box(car, 0, 1.55, -0.2, 1.06, 0.14, 0.25, mat(0x253355, 0.2));
-    box(
+    const redBeacon = box(
       car,
       -0.28,
       1.66,
@@ -183,7 +183,7 @@ export function carMesh(police = false, paint = 0x13c8c5) {
       0.2,
       new THREE.MeshBasicMaterial({ color: 0xff315d }),
     );
-    box(
+    const blueBeacon = box(
       car,
       0.28,
       1.66,
@@ -199,8 +199,22 @@ export function carMesh(police = false, paint = 0x13c8c5) {
     const blue = new THREE.PointLight(0x4185ff, 3, 9);
     blue.position.set(0.35, 1.8, -0.2);
     car.add(blue);
+    red.visible = false;
+    blue.visible = false;
+    redBeacon.visible = false;
+    blueBeacon.visible = false;
+    car.userData.policeLights = [red, blue];
+    car.userData.policeBeacons = [redBeacon, blueBeacon];
   }
   return car;
+}
+
+export function setPoliceActive(car: THREE.Object3D, active: boolean) {
+  const lights = car.userData.policeLights as THREE.PointLight[] | undefined;
+  lights?.forEach((light) => (light.visible = active));
+  const beacons = car.userData.policeBeacons as THREE.Object3D[] | undefined;
+  beacons?.forEach((beacon) => (beacon.visible = active));
+  car.userData.policeActive = active;
 }
 
 export function checkpointMesh() {

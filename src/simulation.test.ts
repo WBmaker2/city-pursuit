@@ -89,12 +89,15 @@ describe("City Pursuit simulation", () => {
     step(s, go, 1 / 60);
     expect(s.status).toBe("lost");
   });
-  it("escape requires three seconds of separation", () => {
+  it("escape clears wanted after ten seconds of separation", () => {
     const s = createState();
     s.checkpoints.forEach((c) => (c.reached = true));
+    s.player.pos = { x: 66, z: 66 };
     s.police.forEach((p) => (p.pos = { x: -70, z: -70 }));
+    s.traffic.forEach((c) => (c.pos = { x: 0, z: 0 }));
     s.pursuit = 20;
-    advance(s, { ...go, up: false }, 2.9);
+    s.wanted = true;
+    advance(s, { ...go, up: false }, 9.9);
     expect(s.status).toBe("playing");
     advance(s, { ...go, up: false }, 0.2);
     expect(s.status).toBe("won");
@@ -104,9 +107,11 @@ describe("City Pursuit simulation", () => {
     s.traffic = [];
     s.police = [s.police[1]];
     s.player.pos = { x: 44, z: -44 };
+    s.police[0].pos = { x: 44, z: -66 };
+    s.wanted = true;
     s.player.damage = 0;
     let nearest = Infinity;
-    for (let i = 0; i < 25 * 60; i++) {
+    for (let i = 0; i < 2 * 60; i++) {
       step(s, { ...go, up: false }, 1 / 60);
       nearest = Math.min(
         nearest,
@@ -117,6 +122,62 @@ describe("City Pursuit simulation", () => {
       );
     }
     expect(nearest).toBeLessThan(4);
+  });
+  it("starts peaceful with parked police", () => {
+    const s = createState();
+    const before = s.police.map((p) => ({ ...p.pos }));
+    advance(s, { ...go, up: false }, 20);
+    expect(s.wanted).toBe(false);
+    expect(s.police.map((p) => p.pos)).toEqual(before);
+  });
+  it("below the limit stays calm", () => {
+    const s = createState();
+    advance(s, { ...go, up: false }, 1);
+    expect(s.wanted).toBe(false);
+    expect(s.wantedReason).toBeNull();
+  });
+  it("overspeed activates only after the delay and latches one episode", () => {
+    const s = createState();
+    s.player.vel = { x: 0, z: 16 };
+    s.player.pos = { x: 0, z: 44 };
+    for (let i = 0; i < 84; i++) {
+      s.player.vel = { x: 0, z: 16 };
+      step(s, { ...go, up: false }, 1 / 60);
+    }
+    expect(s.wanted).toBe(false);
+    for (let i = 0; i < 12; i++) {
+      s.player.vel = { x: 0, z: 16 };
+      step(s, { ...go, up: false }, 1 / 60);
+    }
+    expect(s.wantedReason).toBe("speeding");
+    const alert = s.alertTime;
+    advance(s, { ...go, up: false }, 1);
+    expect(s.alertTime).toBeLessThan(alert);
+  });
+  it("moving player collision is an offense but idle NPC hit is not", () => {
+    const idle = createState();
+    idle.traffic[0].pos = { ...idle.player.pos };
+    step(idle, { ...go, up: false }, 0.01);
+    expect(idle.wanted).toBe(false);
+    const moving = createState();
+    moving.traffic[0].pos = { ...moving.player.pos };
+    moving.player.vel = { x: 0, z: 3 };
+    step(moving, { ...go, up: false }, 0.01);
+    expect(moving.wantedReason).toBe("vehicle-crash");
+  });
+  it("separation timer resets on reapproach and clear is independent of checkpoints", () => {
+    const s = createState();
+    s.wanted = true;
+    s.police.forEach((p) => (p.pos = { x: -70, z: -70 }));
+    advance(s, { ...go, up: false }, 6);
+    expect(s.escapeTime).toBeGreaterThan(5);
+    s.police[0].pos = { ...s.player.pos };
+    step(s, { ...go, up: false }, 0.01);
+    expect(s.escapeTime).toBe(0);
+    s.police.forEach((p) => (p.pos = { x: -70, z: -70 }));
+    advance(s, { ...go, up: false }, 10.1);
+    expect(s.wanted).toBe(false);
+    expect(s.status).toBe("playing");
   });
   it("moving cars remain on the rendered street grid", () => {
     const s = createState();

@@ -7,12 +7,16 @@ import {
   type GameState,
   type Input,
   WORLD,
+  ESCAPE_SECONDS,
+  SPEED_LIMIT_KMH,
+  SPEEDING_THRESHOLD_SECONDS,
 } from "./simulation";
-import { carMesh, checkpointMesh, createWorld, syncObject } from "./world";
+import { carMesh, checkpointMesh, createWorld, setPoliceActive, syncObject } from "./world";
 import "./style.css";
 
 const app = document.querySelector("#app") as HTMLElement;
-app.innerHTML = `<main class="game-shell"><div id="fallback" class="fallback" hidden><strong>이 브라우저에서는 3D 화면을 열 수 없습니다.</strong><span id="fallback-copy">WebGL을 켜거나 최신 브라우저에서 다시 시도해 주세요.</span><button id="fallback-reload" class="primary">다시 불러오기</button></div><section class="start-card" id="start-card"><p class="eyebrow">NEON DISTRICT · 01</p><h1>CITY <em>PURSUIT</em></h1><p>황혼의 도시를 가로질러 체크포인트를 통과하고 경찰의 추격을 따돌리세요.</p><button id="start" class="primary gi-pulse">추격 시작 <span>↗</span></button><div class="keys"><span>WASD / 방향키</span><span>운전</span><span>SHIFT</span><span>부스트</span><span>SPACE</span><span>핸드브레이크</span><span>S / ↓</span><span>브레이크·후진</span></div></section><section id="hud" class="hud" hidden><div class="topbar"><div class="logo">CITY <em>PURSUIT</em><small>NEON DISTRICT // NIGHT RUN</small></div><div class="stats"><div><small>SPEED</small><b id="speed">0</b><i>KM/H</i></div><div><small>SCORE</small><b id="score">0</b><i>PTS</i></div><div><small>GATES</small><b id="cp">0/5</b><i>ROUTE</i></div><div><small>TIME</small><b id="timer">180</b><i>SEC</i></div></div><button id="pause" class="icon-button" aria-label="일시정지">Ⅱ</button></div><div class="mission"><small>NEXT OBJECTIVE</small><strong id="mission">CHECKPOINT 01</strong><span id="hint">황금 게이트를 통과하세요</span></div><aside class="right-rail"><canvas id="map" width="150" height="150"></canvas><div class="meters"><div><span>VEHICLE</span><b id="damage">100%</b></div><div><span>PURSUIT</span><b id="pursuit">50%</b></div></div></aside><button id="help" class="help">조작 · 업데이트</button><div id="touch" class="touch"><button data-key="left">◀</button><button data-key="up">▲</button><button data-key="down">▼</button><button data-key="right">▶</button><button data-key="boost">BOOST</button></div></section><div id="modal" class="modal" hidden><div class="modal-card"><button id="close" class="close" aria-label="닫기">×</button><p class="eyebrow">DRIVER BRIEFING</p><h2>조작 안내</h2><p>WASD 또는 방향키로 가속하고 조향합니다. <b>SHIFT</b>는 부스트, <b>SPACE</b>는 급회전용 핸드브레이크입니다.</p><p><b>P / ESC</b> 일시정지 · <b>R</b> 재시작</p><hr><small>업데이트 내역 · 2026.09.08<br>도시 그리드, 순서형 체크포인트, 경찰 추격, 모바일 조작 추가</small></div></div><div id="result" class="result" hidden><p class="eyebrow" id="result-kicker">RUN COMPLETE</p><h2 id="result-title">ESCAPED</h2><p id="result-copy">모든 체크포인트를 통과했습니다.</p><button id="restart" class="primary">다시 달리기 <span>↻</span></button></div></main>`;
+app.innerHTML = `<main class="game-shell"><div id="fallback" class="fallback" hidden><strong>이 브라우저에서는 3D 화면을 열 수 없습니다.</strong><span id="fallback-copy">WebGL을 켜거나 최신 브라우저에서 다시 시도해 주세요.</span><button id="fallback-reload" class="primary">다시 불러오기</button></div><section class="start-card" id="start-card"><p class="eyebrow">NEON DISTRICT · 01</p><h1>CITY <em>PURSUIT</em></h1><p>처음에는 평화로운 자유 주행입니다. ${SPEED_LIMIT_KMH}km/h를 ${SPEEDING_THRESHOLD_SECONDS}초 넘기거나 움직이며 다른 차량과 부딪힐 때만 경찰 추격이 시작됩니다.</p><button id="start" class="primary gi-pulse">주행 시작 <span>↗</span></button><div class="keys"><span>WASD / 방향키</span><span>운전</span><span>SHIFT</span><span>부스트</span><span>SPACE</span><span>핸드브레이크</span><span>S / ↓</span><span>브레이크·후진</span></div></section><section id="hud" class="hud" hidden><div class="topbar"><div class="logo">CITY <em>PURSUIT</em><small>NEON DISTRICT // NIGHT RUN</small></div><div class="stats"><div><small>SPEED</small><b id="speed">0</b><i>KM/H</i></div><div><small>SCORE</small><b id="score">0</b><i>PTS</i></div><div><small>GATES</small><b id="cp">0/5</b><i>ROUTE</i></div><div><small>TIME</small><b id="timer">180</b><i>SEC</i></div></div><button id="pause" class="icon-button">Ⅱ</button></div><div class="mission"><small>NEXT OBJECTIVE</small><strong id="mission">CHECKPOINT 01</strong><span id="hint">황금 게이트를 통과하세요</span></div><aside class="right-rail"><canvas id="map" width="150" height="150"></canvas><div class="meters"><div><span>VEHICLE</span><b id="damage">100%</b></div><div><span>PURSUIT</span><b id="pursuit">CALM</b></div></div></aside><aside id="wanted-panel" class="wanted-panel" hidden><strong id="wanted-title">⚠ 경찰 추격</strong><span id="wanted-reason"></span><b id="escape-countdown"></b><small>경찰과 42m 이상 거리를 ${ESCAPE_SECONDS}초 연속 유지하면 추격이 해제됩니다. 가까워지면 시간이 초기화됩니다.</small></aside><button id="help" class="help">조작 · 업데이트</button><div id="touch" class="touch"><button data-key="left">◀</button><button data-key="up">▲</button><button data-key="down">▼</button><button data-key="right">▶</button><button data-key="boost">BOOST</button></div></section><div id="modal" class="modal" hidden><div class="modal-card"><button id="close" class="close">×</button><p class="eyebrow">DRIVER BRIEFING</p><h2>조작 안내</h2><p>WASD 또는 방향키로 운전하고 SHIFT로 부스트, SPACE로 핸드브레이크를 사용합니다.</p><p>${SPEED_LIMIT_KMH}km/h 초과가 ${SPEEDING_THRESHOLD_SECONDS}초 지속되거나 움직이는 중 차량과 충돌하면 추격이 시작됩니다.</p><p>경찰과 42m 이상 ${ESCAPE_SECONDS}초 연속 떨어져 있으면 해제됩니다. 거리가 좁혀지면 시간이 초기화됩니다.</p><p>P / ESC 일시정지 · R 재시작</p><hr><small>업데이트 내역 · 2026.09.08<br>위반 후 경찰 추격과 도주 HUD 추가</small></div></div><div id="result" class="result" hidden><p class="eyebrow" id="result-kicker">RUN COMPLETE</p><h2 id="result-title">ESCAPED</h2><p id="result-copy">모든 체크포인트를 통과했습니다.</p><button id="restart" class="primary">다시 달리기 <span>↻</span></button></div></main>`;
+app.querySelector(".modal-card")?.insertAdjacentHTML("beforeend", "<p>WASD 또는 방향키로 운전하고 SHIFT로 부스트, SPACE로 핸드브레이크를 사용합니다.</p>");
 
 let physicsReady = false;
 const physicsInit = initPhysics()
@@ -22,7 +26,7 @@ const physicsInit = initPhysics()
     state.status = "paused";
     const button = document.querySelector("#start") as HTMLButtonElement;
     button.disabled = false;
-    button.textContent = "추격 시작 ↗";
+    button.textContent = "주행 시작 ↗";
   })
   .catch(() => {
     const fallbackMessage = document.querySelector(
@@ -203,7 +207,23 @@ function updateHud() {
   (document.querySelector("#damage") as HTMLElement).textContent =
     `${Math.max(0, 100 - Math.round(state.player.damage))}%`;
   (document.querySelector("#pursuit") as HTMLElement).textContent =
-    `${Math.round(state.pursuit)}%`;
+    state.wanted ? `${Math.round(state.pursuit)}%` : "CALM";
+  const wantedPanel = document.querySelector("#wanted-panel") as HTMLElement;
+  wantedPanel.hidden = !state.wanted && state.clearMessageTime <= 0;
+  (document.querySelector("#wanted-title") as HTMLElement).textContent =
+    state.wanted ? "⚠ 경찰 추격 중" : "✓ 추격 해제";
+  (document.querySelector("#wanted-reason") as HTMLElement).textContent =
+    state.wantedReason === "speeding"
+      ? `과속 신고 · ${SPEED_LIMIT_KMH}km/h 제한을 ${SPEEDING_THRESHOLD_SECONDS}초 초과`
+      : state.wantedReason === "vehicle-crash"
+        ? "차량 충돌 신고 · 움직이는 중 다른 차량과 충돌"
+        : "이제 자유롭게 주행할 수 있습니다.";
+  (document.querySelector("#escape-countdown") as HTMLElement).textContent =
+    state.wanted
+      ? state.escapeTime > 0
+        ? `추격 해제까지 ${Math.max(0, ESCAPE_SECONDS - state.escapeTime).toFixed(1)}초`
+        : `경찰과 거리를 벌리세요 · ${ESCAPE_SECONDS.toFixed(1)}초 대기`
+      : "경찰이 추격을 멈췄습니다.";
   (document.querySelector("#mission") as HTMLElement).textContent =
     next < 0
       ? "ESCAPE"
@@ -211,7 +231,9 @@ function updateHud() {
   (document.querySelector("#hint") as HTMLElement).textContent =
     state.status === "paused"
       ? "일시정지 · P 또는 버튼으로 계속"
-      : next < 0
+      : state.wanted
+        ? `42m 이상 거리를 ${ESCAPE_SECONDS}초 유지하세요`
+        : next < 0
         ? "경찰과 거리를 벌리세요"
         : "황금 게이트를 통과하세요";
 }
@@ -251,7 +273,7 @@ function drawMap() {
   state.checkpoints.forEach((checkpoint, index) => {
     if (index === next) dot(checkpoint.pos, "#ffb743", 5);
   });
-  state.police.forEach((car) => dot(car.pos, "#ff4769", 3));
+  state.police.forEach((car) => dot(car.pos, state.wanted ? "#ff4769" : "#7f829d", 3));
   dot(state.player.pos, "#23ddd0", 5);
 }
 function showResult() {
@@ -278,6 +300,7 @@ function syncView() {
   state.police.forEach((car, index) =>
     syncObject(police[index], car.pos, car.heading),
   );
+  police.forEach((mesh) => setPoliceActive(mesh, state.wanted));
   const next = state.checkpoints.findIndex((entry) => !entry.reached);
   state.checkpoints.forEach((checkpoint, index) => {
     checkpoints[index].visible = index === next;

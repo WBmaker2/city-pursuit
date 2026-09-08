@@ -31,11 +31,21 @@ export type GameState = {
   combo: number;
   collisionTimer: number;
   escapeTime: number;
+  wanted: boolean;
+  wantedReason: "speeding" | "vehicle-crash" | null;
+  speedingTime: number;
+  speedingEpisode: boolean;
+  alertTime: number;
+  clearMessageTime: number;
 };
 export const WORLD = 80,
   ROAD = 8,
   GRID = 22,
   MAX_SPEED = 25;
+export const SPEED_LIMIT_KMH = 120,
+  SPEEDING_THRESHOLD_SECONDS = 1.5,
+  WANTED_DISTANCE = 42,
+  ESCAPE_SECONDS = 10;
 const HALF = 4,
   RADIUS = 1.35,
   clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
@@ -114,10 +124,16 @@ export function createState(): GameState {
     score: 0,
     time: 0,
     status: "playing",
-    pursuit: 50,
+    pursuit: 0,
     combo: 1,
     collisionTimer: 0,
     escapeTime: 0,
+    wanted: false,
+    wantedReason: null,
+    speedingTime: 0,
+    speedingEpisode: false,
+    alertTime: 0,
+    clearMessageTime: 0,
   };
   resetPhysics(s);
   return s;
@@ -231,7 +247,7 @@ function collide(player: Car, other: Car, s: GameState) {
     dx = player.pos.x - other.pos.x,
     dz = player.pos.z - other.pos.z;
   let d = Math.hypot(dx, dz);
-  if (d >= min) return;
+  if (d >= min) return false;
   let nx: number, nz: number;
   if (d < 1e-6) {
     nx = other.lane % 2 ? 1 : 0;
@@ -248,24 +264,49 @@ function collide(player: Car, other: Car, s: GameState) {
   other.pos.z -= nz * push;
   if (!isOnRoad(player.pos)) player.pos.x = grid(player.pos.x);
   if (!isOnRoad(other.pos)) other.pos.x = grid(other.pos.x);
+  const movingPlayer = Math.hypot(player.vel.x, player.vel.z) > 0.5;
   if (s.collisionTimer <= 0) {
     player.damage += 18;
     player.vel.x *= -0.35;
     player.vel.z *= -0.35;
     s.score = Math.max(0, s.score - 50);
     s.collisionTimer = 0.75;
+    return movingPlayer;
+  }
+  return false;
+}
+function startWanted(s: GameState, reason: "speeding" | "vehicle-crash") {
+  s.wanted = true;
+  s.wantedReason = reason;
+  s.pursuit = 100;
+  s.escapeTime = 0;
+  s.alertTime = 4;
+  s.clearMessageTime = 0;
+}
+function clearWanted(s: GameState) {
+  s.wanted = false;
+  s.wantedReason = null;
+  s.escapeTime = 0;
+  s.pursuit = 0;
+  s.clearMessageTime = 4;
+  for (const p of s.police) {
+    p.vel = { x: 0, z: 0 };
+    p.waypoint = undefined;
   }
 }
 export function step(s: GameState, input: Input, dt: number): GameState {
   if (s.status !== "playing") return s;
   dt = clamp(dt, 0, 0.1);
   s.time += dt;
+  s.alertTime = Math.max(0, s.alertTime - dt);
+  s.clearMessageTime = Math.max(0, s.clearMessageTime - dt);
   s.collisionTimer = Math.max(0, s.collisionTimer - dt);
   const old = { ...s.player.pos };
   drive(s.player, input, dt);
   road(s.player, old);
   for (const c of s.traffic) traffic(c, dt);
-  for (const p of s.police) police(p, s.player, dt);
+  if (s.wanted) for (const p of s.police) police(p, s.player, dt);
+  else for (const p of s.police) p.vel = { x: 0, z: 0 };
   const b = bridges.get(s);
   b?.syncPosition(s.player.pos.x, s.player.pos.z);
   b?.syncCars(
@@ -276,7 +317,23 @@ export function step(s: GameState, input: Input, dt: number): GameState {
     })),
   );
   b?.step(dt);
-  for (const c of [...s.traffic, ...s.police]) collide(s.player, c, s);
+  for (const c of [...s.traffic, ...s.police]) {
+    if (collide(s.player, c, s)) startWanted(s, "vehicle-crash");
+  }
+  const speedKmh = Math.hypot(s.player.vel.x, s.player.vel.z) * 8;
+  if (speedKmh > SPEED_LIMIT_KMH) {
+    s.speedingTime += dt;
+    if (
+      !s.speedingEpisode &&
+      s.speedingTime >= SPEEDING_THRESHOLD_SECONDS
+    ) {
+      s.speedingEpisode = true;
+      startWanted(s, "speeding");
+    }
+  } else {
+    s.speedingTime = 0;
+    s.speedingEpisode = false;
+  }
   s.score += Math.hypot(s.player.vel.x, s.player.vel.z) * dt * 0.8;
   const next = s.checkpoints.findIndex((c) => !c.reached);
   if (
@@ -287,16 +344,19 @@ export function step(s: GameState, input: Input, dt: number): GameState {
     s.score += 500;
     s.combo++;
   }
-  const nearest = Math.min(...s.police.map((p) => dist(s.player.pos, p.pos)));
-  if (nearest > 42) {
-    s.pursuit = Math.max(0, s.pursuit - dt * 10);
-    s.escapeTime += dt;
-  } else {
-    s.escapeTime = 0;
-    s.pursuit = Math.min(100, s.pursuit + (nearest < 16 ? dt * 4 : 0));
+  if (s.wanted) {
+    const nearest = Math.min(...s.police.map((p) => dist(s.player.pos, p.pos)));
+    if (nearest > WANTED_DISTANCE) {
+      s.escapeTime += dt;
+      s.pursuit = Math.max(0, 100 - (s.escapeTime / ESCAPE_SECONDS) * 100);
+    } else {
+      s.escapeTime = 0;
+      s.pursuit = 100;
+    }
+    if (s.escapeTime >= ESCAPE_SECONDS) clearWanted(s);
   }
   if (s.player.damage >= 100 || s.time >= 180) s.status = "lost";
-  else if (s.checkpoints.every((c) => c.reached) && s.escapeTime >= 3) {
+  else if (s.checkpoints.every((c) => c.reached) && !s.wanted) {
     s.status = "won";
     s.score += 1000;
   }
@@ -319,6 +379,15 @@ export function debugSnapshot(s: GameState) {
     total: s.checkpoints.length,
     damage: Math.round(s.player.damage),
     pursuit: Math.round(s.pursuit),
+    wanted: s.wanted,
+    wantedReason: s.wantedReason,
+    speedingTime: +s.speedingTime.toFixed(2),
+    escapeTime: +s.escapeTime.toFixed(2),
+    escapeRemaining: s.wanted
+      ? Math.max(0, +(ESCAPE_SECONDS - s.escapeTime).toFixed(1))
+      : 0,
+    alertTime: +s.alertTime.toFixed(1),
+    clearMessageTime: +s.clearMessageTime.toFixed(1),
     player: { x: +s.player.pos.x.toFixed(1), z: +s.player.pos.z.toFixed(1) },
   };
 }
