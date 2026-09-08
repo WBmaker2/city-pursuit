@@ -1,14 +1,14 @@
 # City Pursuit release checklist
 
-이 문서는 `WBmaker2/city-pursuit` 공개 저장소와 GitHub Pages 릴리스 절차를 기록합니다. 현재 문서 작성 시점에는 저장소 생성, 커밋, 푸시, Actions 실행, Pages 공개 URL을 아직 확인하지 않았습니다.
+이 문서는 `WBmaker2/city-pursuit` 공개 저장소와 GitHub Pages 릴리스 절차 및 실제 결과를 기록합니다.
 
 ## 현재 상태
 
-- 소스 구현과 최종 게임 검토: 대기 중
-- `package-lock.json` 생성 및 `npm ci` 확인: 대기 중
-- GitHub 저장소 `WBmaker2/city-pursuit`: 미생성 상태로 확인됨
-- GitHub Pages Actions 실행: 대기 중
-- 공개 플레이 URL: 아직 없음
+- 소스 구현과 최종 게임 검토: 완료
+- `package-lock.json` 생성 및 `npm ci` 확인: 완료
+- GitHub 저장소 `WBmaker2/city-pursuit`: 공개 완료
+- GitHub Pages Actions 실행: 성공
+- 공개 플레이 URL: https://wbmaker2.github.io/city-pursuit/
 
 ## 로컬 검증
 
@@ -20,11 +20,11 @@ npm test
 npm run build
 ```
 
-배포 전에는 개발 서버와 ego-browser에서 실제 키보드 운전, 체크포인트 순서, 충돌·실패·재시작, 일시정지, 좁은 화면, 콘솔 오류를 확인합니다. VoiceOver 검증은 범위에서 제외합니다.
+공개 배포에서 W+Shift 운전, 체크포인트 진행, 일시정지, 모바일 터치, 반응형 레이아웃, 콘솔·네트워크 오류를 확인했습니다. 진단 상태 주입으로 충돌·실패·승리·재시작도 확인했습니다. VoiceOver 검증은 범위에서 제외합니다. 자세한 내용은 [docs/TESTING.md](./TESTING.md)를 참조합니다.
 
 ## GitHub 공개 및 Pages
 
-사용자 승인 계정은 `WBmaker2`이며 대상 저장소는 `WBmaker2/city-pursuit`입니다. 최종 게임 검토가 끝난 뒤 아래 순서로 실행합니다.
+사용자 승인 계정은 `WBmaker2`이며 대상 저장소는 `WBmaker2/city-pursuit`입니다. 최종 게임 검토 후 아래 순서로 실행했습니다.
 
 ```bash
 git init -b main
@@ -39,10 +39,11 @@ git push -u origin main
 
 ## 릴리스 후 기록
 
-아래 항목은 실제 실행 결과로 채웁니다.
+실제 실행 결과:
 
-- 커밋 SHA: 대기 중
-- GitHub Actions 실행: 대기 중
-- 공개 URL: 대기 중
-- 공개 브라우저 확인: 대기 중
-- 남은 문제: 대기 중
+- 초기 릴리스 커밋 SHA: `c281f8f1805e5551086b23a6ddbdd5b325565035`
+- 초기 Pages Actions 실행: [34201326888](https://github.com/WBmaker2/city-pursuit/actions/runs/34201326888), 성공
+- 공개 URL: [https://wbmaker2.github.io/city-pursuit/](https://wbmaker2.github.io/city-pursuit/)
+- 공개 브라우저 확인: `?debug` 입력·상태·텍스처·반응형 검증 완료
+- 문서 갱신 커밋: 이 문서의 후속 커밋으로 기록
+- 남은 문제: Vite 번들 크기 경고(약 2.6MB, gzip 923KB), native raster screenshot 캡처는 도구 timeout으로 미실행
