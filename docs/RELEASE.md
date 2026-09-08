@@ -70,3 +70,6 @@ git push -u origin main
 - `npm test` 32/32, `npm run build` 성공
 - 실제 canvas 그리기 호출·debug 상태·DOM 범례·390×844 `scrollWidth`를 production preview에서 확인
 - VoiceOver 및 raster screenshot 검증은 기존 릴리스 범위와 동일하게 제외
+- 커밋 SHA: `16cb10d`
+- Pages Actions 실행: [34221958775](https://github.com/WBmaker2/city-pursuit/actions/runs/34221958775), 성공
+- 공개 URL: [https://wbmaker2.github.io/city-pursuit/](https://wbmaker2.github.io/city-pursuit/), HTTP 200 확인
