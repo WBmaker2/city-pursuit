@@ -1,4 +1,5 @@
 import { createPhysicsBridge, type PhysicsBridge } from "./physics";
+import { resetTrafficMemory, updateTraffic } from "./traffic-ai";
 
 export type Vec = { x: number; z: number };
 export type Input = {
@@ -136,6 +137,7 @@ export function createState(): GameState {
     clearMessageTime: 0,
   };
   resetPhysics(s);
+  resetTrafficMemory(s.traffic);
   return s;
 }
 const blocks: Vec[] = [];
@@ -195,16 +197,6 @@ function drive(c: Car, i: Input, dt: number) {
   c.pos.x += c.vel.x * dt;
   c.pos.z += c.vel.z * dt;
 }
-function traffic(c: Car, dt: number) {
-  const p = { ...c.pos };
-  c.pos.x += c.vel.x * dt;
-  c.pos.z += c.vel.z * dt;
-  if (c.pos.x > 76) c.pos.x = -76;
-  if (c.pos.x < -76) c.pos.x = 76;
-  if (c.pos.z > 76) c.pos.z = -76;
-  if (c.pos.z < -76) c.pos.z = 76;
-  road(c, p);
-}
 function nextWaypoint(p: Car, player: Car) {
   const at = node(p.pos),
     target = node(player.pos);
@@ -257,6 +249,7 @@ function collide(player: Car, other: Car, s: GameState) {
     nx = dx / d;
     nz = dz / d;
   }
+  const impactDirection = { x: -dx, z: -dz };
   const push = (min - d) / 2;
   player.pos.x += nx * push;
   player.pos.z += nz * push;
@@ -264,7 +257,12 @@ function collide(player: Car, other: Car, s: GameState) {
   other.pos.z -= nz * push;
   if (!isOnRoad(player.pos)) player.pos.x = grid(player.pos.x);
   if (!isOnRoad(other.pos)) other.pos.x = grid(other.pos.x);
-  const movingPlayer = Math.hypot(player.vel.x, player.vel.z) > 0.5;
+  const playerSpeed = Math.hypot(player.vel.x, player.vel.z);
+  const otherSpeed = Math.hypot(other.vel.x, other.vel.z);
+  const sameDirection = player.vel.x * other.vel.x + player.vel.z * other.vel.z > 0;
+  const movingPlayer = d < 0.25
+    ? playerSpeed > 0.5 && !(sameDirection && otherSpeed > playerSpeed + 0.5)
+    : dotToward(player.vel, impactDirection) > 0.5;
   if (s.collisionTimer <= 0) {
     player.damage += 18;
     player.vel.x *= -0.35;
@@ -274,6 +272,10 @@ function collide(player: Car, other: Car, s: GameState) {
     return movingPlayer;
   }
   return false;
+}
+function dotToward(velocity: Vec, direction: Vec) {
+  const length = Math.hypot(direction.x, direction.z);
+  return length < 1e-6 ? 0 : (velocity.x * direction.x + velocity.z * direction.z) / length;
 }
 function startWanted(s: GameState, reason: "speeding" | "vehicle-crash") {
   s.wanted = true;
@@ -304,7 +306,7 @@ export function step(s: GameState, input: Input, dt: number): GameState {
   const old = { ...s.player.pos };
   drive(s.player, input, dt);
   road(s.player, old);
-  for (const c of s.traffic) traffic(c, dt);
+  updateTraffic(s.traffic, s.player, dt, (from, to) => !blocked(from, to) && isOnRoad(to), s.police);
   if (s.wanted) for (const p of s.police) police(p, s.player, dt);
   else for (const p of s.police) p.vel = { x: 0, z: 0 };
   const b = bridges.get(s);

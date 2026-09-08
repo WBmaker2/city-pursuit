@@ -54,3 +54,10 @@ git push -u origin main
 - 공개 브라우저 확인: `?debug` 입력·상태·텍스처·반응형 검증 완료
 - 문서 갱신 커밋: 이 문서의 후속 커밋으로 기록
 - 남은 문제: Vite 번들 크기 경고(약 2.6MB, gzip 923KB), native raster screenshot 캡처는 도구 timeout으로 미실행
+
+### 2026-09-08 교통 회피 후속 릴리스
+
+- 일반 차량의 예측 제동, 교차 양보, 안전 간격, 점유된 경계 재등장 대기 추가
+- `npm test` 31/31, `npm run build` 성공
+- production preview에서 정지 플레이어·추종·교차·재출발·W키 운전 시나리오 확인
+- 진단 state injection 결과와 실제 키보드 결과를 분리해 기록

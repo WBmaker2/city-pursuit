@@ -198,4 +198,52 @@ describe("City Pursuit simulation", () => {
     step(s, { ...go, up: false, down: true, right: true }, 0.5);
     expect(s.player.heading).toBeGreaterThan(Math.PI);
   });
+  it("ordinary traffic brakes before a stationary player", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0]];
+    s.player.pos = { x: 0, z: 0 };
+    s.player.vel = { x: 0, z: 0 };
+    s.traffic[0].pos = { x: 0, z: -16 };
+    s.traffic[0].vel = { x: 0, z: 9 };
+    advance(s, { ...go, up: false }, 2);
+    expect(s.player.damage).toBe(0);
+    expect(s.wanted).toBe(false);
+    expect(Math.hypot(s.traffic[0].pos.x - s.player.pos.x, s.traffic[0].pos.z - s.player.pos.z)).toBeGreaterThanOrEqual(3.8);
+  });
+  it("stopped traffic resumes after its obstacle clears", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0]];
+    s.player.pos = { x: 0, z: 0 };
+    s.traffic[0].pos = { x: 0, z: -14 };
+    s.traffic[0].vel = { x: 0, z: 9 };
+    advance(s, { ...go, up: false }, 1.5);
+    const stopped = s.traffic[0].pos.z;
+    s.player.pos = { x: 0, z: 30 };
+    advance(s, { ...go, up: false }, 1.5);
+    expect(s.traffic[0].pos.z).toBeGreaterThan(stopped);
+  });
+  it("two approaching NPCs preserve a safe gap", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0], s.traffic[1]];
+    s.traffic[0].pos = { x: 0, z: -12 };
+    s.traffic[0].vel = { x: 0, z: 8 };
+    s.traffic[1].pos = { x: 0, z: 12 };
+    s.traffic[1].vel = { x: 0, z: -8 };
+    s.traffic[1].heading = Math.PI;
+    advance(s, { ...go, up: false }, 3);
+    expect(Math.hypot(s.traffic[0].pos.x - s.traffic[1].pos.x, s.traffic[0].pos.z - s.traffic[1].pos.z)).toBeGreaterThanOrEqual(3.8);
+  });
+  it("does not approve two cars for the same wrap destination", () => {
+    const s = createState();
+    s.traffic = [s.traffic[0], s.traffic[1]];
+    s.player.pos = { x: 0, z: 66 };
+    s.traffic[0].pos = { x: 75.8, z: 0 };
+    s.traffic[0].vel = { x: 9, z: 0 };
+    s.traffic[0].heading = Math.PI / 2;
+    s.traffic[1].pos = { x: 75.8, z: 10 };
+    s.traffic[1].vel = { x: 9, z: 0 };
+    s.traffic[1].heading = Math.PI / 2;
+    step(s, { ...go, up: false }, 0.1);
+    expect(Math.hypot(s.traffic[0].pos.x - s.traffic[1].pos.x, s.traffic[0].pos.z - s.traffic[1].pos.z)).toBeGreaterThanOrEqual(3.8);
+  });
 });
