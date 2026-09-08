@@ -1,0 +1,402 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+KR:wght@500;700;900&display=swap");
+:root {
+  font-family: "Noto Sans KR", sans-serif;
+  color: #f7f5f0;
+  background: #11152b;
+}
+[hidden] {
+  display: none !important;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #11152b;
+}
+canvas {
+  display: block;
+}
+.scene-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+.game-shell {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  padding: 24px;
+  pointer-events: none;
+  text-shadow: 0 2px 12px #080a18;
+}
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.logo {
+  color: #f5c07a;
+  font: 800 31px "Barlow Condensed";
+  letter-spacing: 2px;
+}
+.logo em {
+  color: #25d8d0;
+  font-style: normal;
+}
+.logo small {
+  display: block;
+  color: #aaaabd;
+  font: 700 10px "Barlow Condensed";
+  letter-spacing: 2px;
+}
+.stats {
+  display: flex;
+  gap: 8px;
+  margin-left: 28px;
+  margin-right: auto;
+}
+.stats div,
+.mission,
+.meters {
+  background: #171a31df;
+  border: 1px solid #4f5274;
+  border-radius: 7px;
+  padding: 8px 12px;
+}
+.stats small,
+.meters span,
+.mission small {
+  display: block;
+  color: #a8a9c1;
+  font: 700 10px "Barlow Condensed";
+  letter-spacing: 1.5px;
+}
+.stats b {
+  display: inline-block;
+  color: #fff;
+  font: 800 25px "Barlow Condensed";
+}
+.stats i {
+  color: #5ed7cf;
+  font: 700 10px "Barlow Condensed";
+  font-style: normal;
+  margin-left: 4px;
+}
+.icon-button,
+.help {
+  pointer-events: auto;
+  border: 1px solid #707395;
+  border-radius: 6px;
+  background: #1b1e3a;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.icon-button {
+  padding: 10px 14px;
+  font-size: 15px;
+}
+.mission {
+  position: fixed;
+  top: 116px;
+  left: 24px;
+  min-width: 220px;
+  border-color: #d68e58;
+}
+.mission strong {
+  display: block;
+  color: #ffc270;
+  font: 800 23px "Barlow Condensed";
+  letter-spacing: 1px;
+}
+.mission span {
+  color: #dfdfeb;
+  font-size: 11px;
+}
+.right-rail {
+  position: fixed;
+  top: 88px;
+  right: 24px;
+  width: 150px;
+}
+#map {
+  width: 150px;
+  height: 150px;
+  border: 2px solid #5e607a;
+  border-radius: 8px;
+  opacity: 0.94;
+}
+.meters {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+.meters b {
+  display: block;
+  color: #4de0cc;
+  font: 800 19px "Barlow Condensed";
+}
+.help {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  padding: 10px 15px;
+}
+.start-card,
+.result {
+  position: fixed;
+  left: 9vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(440px, calc(100vw - 48px));
+  z-index: 4;
+}
+.start-card {
+  padding: 34px;
+  border: 1px solid #505579;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #171a34f2, #171a31d9);
+  box-shadow: 0 24px 80px #06081488;
+  overflow: hidden;
+}
+.start-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 58%;
+  z-index: -1;
+  opacity: 0.22;
+  background: url("/assets/city-atlas.png") right bottom / 200% 200% no-repeat;
+  mix-blend-mode: screen;
+}
+.eyebrow {
+  color: #ffb86f;
+  font: 700 12px "Barlow Condensed";
+  letter-spacing: 2px;
+}
+h1 {
+  margin: 6px 0 12px;
+  color: #f7f5f0;
+  font: 800 clamp(52px, 8vw, 84px)/0.88 "Barlow Condensed";
+  letter-spacing: 2px;
+}
+h1 em {
+  color: #25d8d0;
+  font-style: normal;
+}
+.start-card > p:not(.eyebrow),
+.result p:not(.eyebrow) {
+  color: #c1c1d0;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.primary {
+  border: 0;
+  border-radius: 6px;
+  background: #25d8d0;
+  color: #10162b;
+  padding: 13px 20px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.primary span {
+  margin-left: 25px;
+  font-size: 18px;
+}
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 6px 10px;
+  margin-top: 25px;
+  color: #8c8ea8;
+  font-size: 10px;
+}
+.keys span:nth-child(odd) {
+  color: #eee;
+  font-family: "Barlow Condensed";
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.modal,
+.result {
+  display: grid;
+  place-items: center;
+  inset: 0;
+  transform: none;
+  width: auto;
+  left: 0;
+  top: 0;
+  background: #080a18aa;
+  z-index: 8;
+}
+.modal-card,
+.result {
+  width: min(430px, calc(100vw - 40px));
+  border: 1px solid #6a6d91;
+  border-radius: 10px;
+  background: #1b1e39;
+  padding: 28px;
+}
+.modal-card {
+  position: relative;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.modal-card h2,
+.result h2 {
+  margin: 0 0 10px;
+  color: #ffc270;
+  font: 800 42px "Barlow Condensed";
+}
+.modal-card p {
+  color: #d5d5e1;
+}
+.modal-card hr {
+  border: 0;
+  border-top: 1px solid #464966;
+}
+.close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: #aaaabd;
+  font-size: 24px;
+  cursor: pointer;
+}
+.result {
+  place-items: start;
+  align-content: center;
+  text-align: left;
+  padding-left: 9vw;
+}
+.result h2 {
+  font-size: 72px;
+  color: #25d8d0;
+}
+.touch {
+  display: none;
+}
+.gi-pulse {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 #25d8d066;
+  }
+  50% {
+    box-shadow: 0 0 0 10px #25d8d000;
+  }
+}
+.fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  background: #11152b;
+  text-align: center;
+  padding: 24px;
+}
+.fallback span {
+  color: #aaaabd;
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .hud {
+    padding: 14px;
+  }
+  .logo {
+    font-size: 25px;
+  }
+  .stats {
+    position: absolute;
+    top: 58px;
+    left: 14px;
+    margin: 0;
+    gap: 4px;
+  }
+  .stats div {
+    padding: 6px 8px;
+  }
+  .stats b {
+    font-size: 19px;
+  }
+  .right-rail {
+    top: 118px;
+    right: 14px;
+    width: 100px;
+  }
+  #map {
+    width: 100px;
+    height: 100px;
+  }
+  .meters {
+    display: flex;
+    padding: 5px 6px;
+    font-size: 9px;
+  }
+  .meters b {
+    font-size: 15px;
+  }
+  .mission {
+    top: auto;
+    bottom: 130px;
+    left: 14px;
+    min-width: 180px;
+  }
+  .help {
+    right: 14px;
+    bottom: 218px;
+    font-size: 11px;
+  }
+  .start-card {
+    left: 14px;
+    padding: 25px;
+  }
+  .keys {
+    grid-template-columns: auto 1fr;
+  }
+  .touch {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    pointer-events: auto;
+  }
+  .touch button {
+    height: 48px;
+    border: 1px solid #686b8c;
+    border-radius: 7px;
+    background: #171a31dd;
+    color: #fff;
+    font-weight: 900;
+  }
+  .touch button:last-child {
+    grid-column: span 4;
+    background: #bd5e65cc;
+  }
+  .result {
+    padding-left: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gi-pulse {
+    animation: none;
+  }
+}
