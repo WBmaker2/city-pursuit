@@ -20,11 +20,20 @@ const modalCard = app.querySelector(".modal-card");
 if (modalCard) {
   modalCard.innerHTML = modalCard.innerHTML
     .replace("움직이는 중 차량과 충돌하면", "다른 차에 들이받으면")
-    .replace("업데이트 내역 · 2026.09.08<br>위반 후 경찰 추격과 도주 HUD 추가", "업데이트 내역 · 2026.09.08<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가");
+    .replace(
+      "업데이트 내역 · 2026.09.08<br>위반 후 경찰 추격과 도주 HUD 추가",
+      "업데이트 내역 · 2026.09.08<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가",
+    );
 }
 app.querySelector(".start-card p:nth-of-type(2)")?.replaceChildren(
   document.createTextNode(`처음에는 평화로운 자유 주행입니다. ${SPEED_LIMIT_KMH}km/h를 ${SPEEDING_THRESHOLD_SECONDS}초 넘기거나 다른 차에 들이받을 때만 경찰 추격이 시작됩니다.`),
 );
+const mapLegend = document.createElement("div");
+mapLegend.className = "map-legend";
+mapLegend.setAttribute("aria-label", "미니맵 범례");
+mapLegend.innerHTML =
+  '<span><i class="legend-dot legend-player"></i>나</span><span><i class="legend-dot legend-traffic"></i>일반차</span><span><i class="legend-dot legend-police"></i>경찰</span>';
+document.querySelector(".right-rail")?.insertBefore(mapLegend, document.querySelector(".meters"));
 
 let physicsReady = false;
 const physicsInit = initPhysics()
@@ -277,10 +286,36 @@ function drawMap() {
     );
     context.fill();
   };
+  const directionMarker = (
+    car: { pos: { x: number; z: number }; heading: number },
+    color: string,
+  ) => {
+    const x = 75 + (car.pos.x / WORLD) * 62;
+    const y = 75 + (car.pos.z / WORLD) * 62;
+    const forward = { x: Math.sin(car.heading), y: Math.cos(car.heading) };
+    const side = { x: forward.y, y: -forward.x };
+    const tip = { x: x + forward.x * 4.2, y: y + forward.y * 4.2 };
+    const left = {
+      x: x - forward.x * 2.4 + side.x * 2.1,
+      y: y - forward.y * 2.4 + side.y * 2.1,
+    };
+    const right = {
+      x: x - forward.x * 2.4 - side.x * 2.1,
+      y: y - forward.y * 2.4 - side.y * 2.1,
+    };
+    context.fillStyle = color;
+    context.beginPath();
+    context.moveTo(tip.x, tip.y);
+    context.lineTo(left.x, left.y);
+    context.lineTo(right.x, right.y);
+    context.closePath();
+    context.fill();
+  };
   const next = state.checkpoints.findIndex((entry) => !entry.reached);
   state.checkpoints.forEach((checkpoint, index) => {
     if (index === next) dot(checkpoint.pos, "#ffb743", 5);
   });
+  state.traffic.forEach((car) => directionMarker(car, "#d8f7ff"));
   state.police.forEach((car) => dot(car.pos, state.wanted ? "#ff4769" : "#7f829d", 3));
   dot(state.player.pos, "#23ddd0", 5);
 }

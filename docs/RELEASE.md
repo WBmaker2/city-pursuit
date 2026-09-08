@@ -61,3 +61,12 @@ git push -u origin main
 - `npm test` 31/31, `npm run build` 성공
 - production preview에서 정지 플레이어·추종·교차·재출발·W키 운전 시나리오 확인
 - 진단 state injection 결과와 실제 키보드 결과를 분리해 기록
+
+### 2026-09-08 미니맵 교통 표시 후속 릴리스
+
+- 미니맵에 모든 일반 NPC 차량의 현재 위치와 진행 방향을 밝은 청백색 삼각형으로 표시
+- 플레이어·일반차·경찰을 구분하는 모바일 대응 범례 추가
+- 모바일 추격 패널을 y=296으로 조정해 오른쪽 HUD와 13px 간격 확보
+- `npm test` 32/32, `npm run build` 성공
+- 실제 canvas 그리기 호출·debug 상태·DOM 범례·390×844 `scrollWidth`를 production preview에서 확인
+- VoiceOver 및 raster screenshot 검증은 기존 릴리스 범위와 동일하게 제외

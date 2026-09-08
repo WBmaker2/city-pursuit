@@ -156,6 +156,30 @@ canvas {
   border-radius: 8px;
   opacity: 0.94;
 }
+.map-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 4px 2px 0;
+  color: #d3d7e6;
+  font-size: 9px;
+  line-height: 12px;
+  white-space: nowrap;
+}
+.map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.legend-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.legend-player { background: #23ddd0; }
+.legend-traffic { background: #d8f7ff; }
+.legend-police { background: #ff4769; }
 .meters {
   display: flex;
   justify-content: space-between;
@@ -364,6 +388,10 @@ h1 em {
     width: 100px;
     height: 100px;
   }
+  .map-legend {
+    margin-top: 3px;
+    font-size: 8px;
+  }
   .meters {
     display: flex;
     padding: 5px 6px;
@@ -378,7 +406,7 @@ h1 em {
     left: 14px;
     min-width: 180px;
   }
-  .wanted-panel { top: 282px; }
+  .wanted-panel { top: 296px; }
   .help {
     right: 14px;
     bottom: 218px;
