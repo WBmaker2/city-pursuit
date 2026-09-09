@@ -4,6 +4,7 @@ export type TrafficCar = {
   vel: TrafficVec;
   heading: number;
   lane: number;
+  laneAnchor?: TrafficVec;
   isPolice?: boolean;
   impact?: TrafficVec;
   impactTime?: number;
@@ -13,6 +14,8 @@ type Snapshot = { car: TrafficCar; pos: TrafficVec; vel: TrafficVec; id: number 
 type Decision = { speed: number; pos: TrafficVec; waiting: boolean };
 
 export const TRAFFIC_CLEARANCE = 4.2;
+export { LANE_OFFSET, COLLISION_CLEARANCE } from "./road-constants";
+import { LANE_OFFSET, rightVector } from "./road-constants";
 const LOOKAHEAD = 18;
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 const length = (v: TrafficVec) => Math.hypot(v.x, v.z);
@@ -27,6 +30,15 @@ const intentHeading = new WeakMap<TrafficCar, number>();
 function forward(c: TrafficCar): TrafficVec {
   const f = { x: Math.sin(c.heading), z: Math.cos(c.heading) };
   return length(c.vel) > 0.4 ? scale(c.vel, 1 / length(c.vel)) : f;
+}
+
+function keepLane(car: TrafficCar, heading: number, position: TrafficVec, dt: number): TrafficVec {
+  if (!car.laneAnchor) return position;
+  const right = rightVector(heading);
+  const target = { x: car.laneAnchor.x + right.x * LANE_OFFSET, z: car.laneAnchor.z + right.z * LANE_OFFSET };
+  const error = (position.x - target.x) * right.x + (position.z - target.z) * right.z;
+  const correction = Math.max(-1.8 * dt, Math.min(1.8 * dt, -error * 0.8 * dt));
+  return { x: position.x + right.x * correction, z: position.z + right.z * correction };
 }
 
 function projectedDistance(a: Snapshot, b: Snapshot, t: number) {
@@ -111,7 +123,7 @@ export function updateTraffic(
     if (shouldYield(a, playerSnapshot, true)) target = 0;
     const braking = target < current ? 24 : 9;
     const speed = clamp(current + (target - current) * Math.min(1, braking * dt / Math.max(1, Math.abs(target - current))), 0, desired);
-    let candidate = add(a.pos, scale(f, speed * dt));
+    let candidate = keepLane(a.car, rememberedHeading, add(a.pos, scale(f, speed * dt)), dt);
     const wrapped = candidate.x > 76 || candidate.x < -76 || candidate.z > 76 || candidate.z < -76;
     if (candidate.x > 76) candidate = { ...candidate, x: -76 };
     if (candidate.x < -76) candidate = { ...candidate, x: 76 };
@@ -125,7 +137,11 @@ export function updateTraffic(
   const finalPositions: TrafficVec[] = [];
   for (const a of all.sort((x, y) => x.id - y.id)) {
     const d = decisions.get(a.car)!;
-    const sweptSelf = { ...a, pos: a.pos, vel: scale({ x: Math.sin(intentHeading.get(a.car) ?? a.car.heading), z: Math.cos(intentHeading.get(a.car) ?? a.car.heading) }, d.speed) };
+    const delta = { x: d.pos.x - a.pos.x, z: d.pos.z - a.pos.z };
+    const sweptVelocity = Math.abs(delta.x) + Math.abs(delta.z) > 40
+      ? scale({ x: Math.sin(intentHeading.get(a.car) ?? a.car.heading), z: Math.cos(intentHeading.get(a.car) ?? a.car.heading) }, d.speed)
+      : scale(delta, 1 / Math.max(dt, 1e-6));
+    const sweptSelf = { ...a, pos: a.pos, vel: sweptVelocity };
     const movingIntoTraffic = all.some((b) => b !== a && sweptDistance(sweptSelf, b, dt) < TRAFFIC_CLEARANCE)
       || sweptDistance(sweptSelf, playerSnapshot, dt) < TRAFFIC_CLEARANCE
       || obstacleSnapshots.some((b) => sweptDistance(sweptSelf, b, dt) < TRAFFIC_CLEARANCE)
@@ -142,7 +158,7 @@ export function updateTraffic(
     }
     a.car.pos = d.pos;
     const heading = intentHeading.get(a.car) ?? a.car.heading;
-    a.car.vel = scale({ x: Math.sin(heading), z: Math.cos(heading) }, d.speed);
+    a.car.vel = sweptVelocity;
     if (d.speed > 0.15) a.car.heading = heading;
     finalPositions.push({ ...d.pos });
     const wrapsAccepted = Math.abs(d.pos.x - a.pos.x) > 40 || Math.abs(d.pos.z - a.pos.z) > 40;

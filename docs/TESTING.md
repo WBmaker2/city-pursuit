@@ -2,7 +2,7 @@
 
 ## Automated
 
-`npm test` — simulation tests 38/38 passed in this checkout, including the traffic avoidance regression suite.
+`npm test` — simulation tests 45/45 passed in this checkout, including the traffic avoidance and wide-road lane regression suites.
 
 `npm run build` — TypeScript and Vite production build passed. The generated JavaScript bundle is about 2.6 MB (923 KB gzip); Vite reports this as a size warning.
 
@@ -19,6 +19,10 @@ Traffic avoidance coverage includes idle-player braking, slow-lead following, pe
 The minimap traffic release was checked in the built preview using the live canvas 2D context and the `?debug` state hooks. All eight `state.traffic` entries produced a light-blue directional triangle (`#d8f7ff`) in the canvas; after one simulated second, all eight marker coordinates changed with their NPC positions. The DOM contained the `나`, `일반차`, and `경찰` legend entries. At 390×844, `scrollWidth` remained 390px; the right rail measured y=118–283 and the wanted panel moved to y=296 to preserve a 13px gap. This QA used canvas calls, state, and DOM geometry rather than screenshots.
 
 The production preview additionally verified the traffic scenarios with state injection: a stationary player ahead held an 8.2813m gap after three seconds with zero damage and no wanted state; clearing the lane resumed the NPC from `z=-8.2813` to `z=0.7465`; perpendicular traffic reached a 6.3611m minimum gap while both progressed; 20 seconds idle stayed calm; and a 1.2-second W-key run moved the player from `z=66` to `z=58.0911` without damage. These diagnostics are separate from keyboard evidence.
+
+The wide-road follow-up was checked in the production preview by the parent QA pass. Road width was `12`, lane offset was `3`, and ordinary traffic and police used right-hand lanes in all four directions. Initial placements were player `(3,66)`, police `(-25,-66)` and `(-66,25)`. With the default traffic set idle for 20 seconds, damage stayed `0` and `wanted=false`. In a separate live `W` run with injected initial state, the player moved `(3,30)→(3,-24.8356)`, an NPC moved `(-3,-10)→(-3,18)`, minimum gap was `6.0127`, and damage stayed `0`. A separate police routing diagnostic sampled 10 seconds across 32 midblock positions, with `wrong=0`, ending at `(22.9987,24.9999)`. These checks combine direct key input and initial-state injection as stated; they are not screenshot-based QA.
+
+The same parent QA pass read rendered pixels at the same pose: mean brightness changed `16.50→48.90`, and the dark-pixel share below 40 changed `98.26%→41.53%`. No snapshot capture tool was used.
 
 The player-power follow-up was checked in the production preview with live controls and debug state: four seconds of ordinary W driving reached `19.464u/s`, above the police `15u/s` cruise, and W+Shift reached `25.0253u/s` (`200.2024km/h`) with zero damage. Releasing Shift and braking with S for 0.5 seconds reduced speed to `0.6855u/s`. Low-speed held-W head-on contact moved the player from `z=30` to `15.3` against an NPC and `15.0` against police over 1.5 seconds. Both targets moved from `z=26.5` to `11.5`/`11.2`; damage reached `36`, the player remained alive, and forward velocity remained positive after the contact. The history panel records forward-momentum preservation. The edge and building-side diagnostics also kept both cars on valid road coordinates and within the `[-76,76]` world bounds.
 

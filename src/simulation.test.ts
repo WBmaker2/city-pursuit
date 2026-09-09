@@ -6,6 +6,7 @@ import {
   initPhysics,
   isOnRoad,
 } from "./simulation";
+import { ROAD_HALF } from "./road-constants";
 const go = {
   up: true,
   down: false,
@@ -160,7 +161,7 @@ describe("City Pursuit simulation", () => {
     expect(s.player.damage).toBeGreaterThan(0);
     expect(isOnRoad(s.player.pos)).toBe(true);
     expect(isOnRoad(s.traffic[0].pos)).toBe(true);
-    expect(s.traffic[0].pos.x).toBeLessThan(4);
+    expect(s.traffic[0].pos.x).toBeLessThan(ROAD_HALF);
     expect(s.player.pos.x).toBeLessThanOrEqual(76);
     expect(s.traffic[0].pos.x).toBeLessThanOrEqual(76);
   });
@@ -169,7 +170,7 @@ describe("City Pursuit simulation", () => {
     s.player.pos = { x: 0, z: 0 };
     s.player.heading = Math.PI / 4;
     advance(s, { ...go, up: true }, 1);
-    expect(Math.abs(s.player.pos.x) < 4 || Math.abs(s.player.pos.z) < 4).toBe(
+    expect(Math.abs(s.player.pos.x) < ROAD_HALF || Math.abs(s.player.pos.z) < ROAD_HALF).toBe(
       true,
     );
   });
@@ -217,10 +218,11 @@ describe("City Pursuit simulation", () => {
         ),
       );
     }
-    expect(nearest).toBeLessThan(4);
+    expect(nearest).toBeLessThan(ROAD_HALF);
   });
   it("starts peaceful with parked police", () => {
     const s = createState();
+    s.traffic = [];
     const before = s.police.map((p) => ({ ...p.pos }));
     advance(s, { ...go, up: false }, 20);
     expect(s.wanted).toBe(false);
@@ -234,6 +236,7 @@ describe("City Pursuit simulation", () => {
   });
   it("overspeed activates only after the delay and latches one episode", () => {
     const s = createState();
+    s.traffic = [];
     s.player.vel = { x: 0, z: 16 };
     s.player.pos = { x: 0, z: 44 };
     for (let i = 0; i < 84; i++) {
@@ -257,6 +260,7 @@ describe("City Pursuit simulation", () => {
     expect(idle.wanted).toBe(false);
     const moving = createState();
     moving.traffic[0].pos = { ...moving.player.pos };
+    moving.traffic[0].impactTime = 1;
     moving.player.vel = { x: 0, z: 3 };
     step(moving, { ...go, up: false }, 0.01);
     expect(moving.wantedReason).toBe("vehicle-crash");

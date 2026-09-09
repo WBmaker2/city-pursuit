@@ -91,3 +91,14 @@ git push -u origin main
 - `npm test` 38/38, `npm run build` 성공
 - production preview에서 `atlasReady`, 새 atlas 경로, `decalReady`, 공유 텍스처 5개와 체크포인트 전환을 진단 훅으로 확인
 - 별도 실제 W 주행에서 `z=22→13.035`, damage `0` 확인
+
+### 2026-09-09 넓은 도로·우측 통행 후속
+
+- 도로 폭 `12`, 차로 오프셋 `3`으로 확장하고 일반 차량·경찰의 네 방향 우측 차로를 정렬
+- 경찰 교차로 웨이포인트와 차로 복귀 로직을 공통 도로 치수에 맞춤
+- 부모 production preview QA: 기본 교통 20초 idle에서 damage `0`, `wanted=false`
+- 부모 production preview QA: 실제 W 주행에서 `(3,30)→(3,-24.8356)`, NPC `(-3,-10)→(-3,18)`, 최소 간격 `6.0127`, damage `0`
+- 부모 production preview QA: 경찰 10초 진단 32개 midblock 샘플 `wrong=0`, 최종 `(22.9987,24.9999)`
+- 동일 포즈 렌더 픽셀 평균 `16.50→48.90`, dark<40 비율 `98.26%→41.53%`; snapshot capture 도구는 사용하지 않음
+- 직접 키 입력과 초기 state 주입 증거를 분리해 기록했으며 VoiceOver와 스크린샷 QA는 제외
+- `npm test` 45/45, `npm run build` 성공

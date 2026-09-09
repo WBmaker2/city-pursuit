@@ -1,5 +1,19 @@
 import { createPhysicsBridge, type PhysicsBridge } from "./physics";
 import { resetTrafficMemory, updateTraffic } from "./traffic-ai";
+import { updatePolice } from "./police-routing";
+import {
+  WORLD,
+  ROAD,
+  GRID,
+  ROAD_HALF,
+  LANE_OFFSET,
+  BUILDING_HALF,
+  CAR_RADIUS,
+  COLLISION_CLEARANCE,
+  isOnRoad,
+  laneAnchor,
+  rightVector,
+} from "./road-constants";
 
 export type Vec = { x: number; z: number };
 export type Input = {
@@ -16,9 +30,9 @@ export type Car = {
   heading: number;
   damage: number;
   lane: number;
+  laneAnchor?: Vec;
   isPolice?: boolean;
   waypoint?: Vec;
-  /** Short-lived arcade shove, applied after AI steering each frame. */
   impact?: Vec;
   impactTime?: number;
 };
@@ -42,22 +56,19 @@ export type GameState = {
   alertTime: number;
   clearMessageTime: number;
 };
-export const WORLD = 80,
-  ROAD = 8,
-  GRID = 22,
-  MAX_SPEED = 25;
+export { WORLD, ROAD, GRID } from "./road-constants";
+export const MAX_SPEED = 25;
 export const SPEED_LIMIT_KMH = 120,
   SPEEDING_THRESHOLD_SECONDS = 1.5,
   WANTED_DISTANCE = 42,
   ESCAPE_SECONDS = 10;
-const HALF = 4,
-  RADIUS = 1.35,
+const HALF = ROAD_HALF,
+  RADIUS = CAR_RADIUS,
   clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z),
   grid = (n: number) => clamp(Math.round(n / GRID) * GRID, -66, 66),
   node = (p: Vec): Vec => ({ x: grid(p.x), z: grid(p.z) });
-export const isOnRoad = (p: Vec) =>
-  Math.abs(p.x - grid(p.x)) < HALF || Math.abs(p.z - grid(p.z)) < HALF;
+export { isOnRoad };
 let bridge: PhysicsBridge | undefined;
 const bridges = new WeakMap<GameState, PhysicsBridge>();
 export async function initPhysics() {
@@ -85,20 +96,26 @@ export function createState(): GameState {
     [0, 0],
   ].map(([x, z]) => ({ pos: { x, z }, radius: 5, reached: false }));
   const traffic: Car[] = [];
+  const routes = [
+    { heading: 0, position: (i: number) => ({ x: -LANE_OFFSET, z: -66 + i * 18 }) },
+    { heading: Math.PI, position: (i: number) => ({ x: LANE_OFFSET, z: 66 - (i + 1) * 18 }) },
+    { heading: Math.PI / 2, position: (i: number) => ({ x: -66 + i * 18, z: LANE_OFFSET }) },
+    { heading: -Math.PI / 2, position: (i: number) => ({ x: 66 - i * 18, z: -LANE_OFFSET }) },
+  ];
   for (let i = 0; i < 8; i++) {
-    const v = i % 2 === 0,
-      lane = ((i % 7) - 3) * GRID;
+    const route = routes[i % routes.length], position = route.position(Math.floor(i / routes.length)), speed = 8 + i % 3;
     traffic.push({
-      pos: v ? { x: lane, z: -66 + i * 15 } : { x: -66 + i * 15, z: lane },
-      vel: v ? { x: 0, z: 8 + (i % 3) } : { x: 8 + (i % 3), z: 0 },
-      heading: v ? 0 : Math.PI / 2,
+      pos: position,
+      vel: { x: Math.sin(route.heading) * speed, z: Math.cos(route.heading) * speed },
+      heading: route.heading,
       damage: 0,
       lane: i,
+      laneAnchor: laneAnchor(position, route.heading),
     });
   }
   const police: Car[] = [
     {
-      pos: { x: 0, z: -66 },
+      pos: { x: -25, z: -66 },
       vel: { x: 0, z: 0 },
       heading: 0,
       damage: 0,
@@ -106,7 +123,7 @@ export function createState(): GameState {
       isPolice: true,
     },
     {
-      pos: { x: -66, z: 22 },
+      pos: { x: -66, z: 25 },
       vel: { x: 0, z: 0 },
       heading: Math.PI / 2,
       damage: 0,
@@ -116,7 +133,7 @@ export function createState(): GameState {
   ];
   const s: GameState = {
     player: {
-      pos: { x: 0, z: 66 },
+      pos: { x: 3, z: 66 },
       vel: { x: 0, z: 0 },
       heading: Math.PI,
       damage: 0,
@@ -156,7 +173,7 @@ function blocked(a: Vec, b: Vec) {
       z = a.z + (b.z - a.z) * t;
     if (
       blocks.some(
-        (q) => Math.abs(x - q.x) < 4 + RADIUS && Math.abs(z - q.z) < 4 + RADIUS,
+        (q) => Math.abs(x - q.x) < BUILDING_HALF + RADIUS && Math.abs(z - q.z) < BUILDING_HALF + RADIUS,
       )
     )
       return true;
@@ -180,8 +197,6 @@ function drive(c: Car, i: Input, dt: number) {
     signed = c.vel.x * f.x + c.vel.z * f.z,
     brake = i.down && signed > 0.3,
     throttle = i.up ? 1 : i.down && signed <= 0.3 ? -0.55 : 0,
-    // With drag this reaches ~19.5u/s in ordinary driving (police cruise at
-    // 15), while boost has a clear second tier without feeling weightless.
     acc = c.isPolice ? 12 : i.boost && i.up ? 36 : 28;
   c.vel.x += f.x * throttle * acc * dt;
   c.vel.z += f.z * throttle * acc * dt;
@@ -231,49 +246,8 @@ function applyImpacts(cars: Car[], dt: number) {
     car.impactTime = Math.max(0, (car.impactTime ?? 0) - dt);
   }
 }
-function nextWaypoint(p: Car, player: Car) {
-  const at = node(p.pos),
-    target = node(player.pos);
-  if (Math.abs(at.x - target.x) < 0.5 && Math.abs(player.pos.x - at.x) < HALF)
-    return { x: at.x, z: player.pos.z };
-  if (Math.abs(at.z - target.z) < 0.5 && Math.abs(player.pos.z - at.z) < HALF)
-    return { x: player.pos.x, z: at.z };
-  const dx = target.x - at.x,
-    dz = target.z - at.z;
-  if (dx && Math.abs(dx) >= Math.abs(dz))
-    return { x: at.x + Math.sign(dx) * GRID, z: at.z };
-  if (dz) return { x: at.x, z: at.z + Math.sign(dz) * GRID };
-  return at;
-}
-function police(p: Car, player: Car, dt: number) {
-  if ((p.impactTime ?? 0) > 0) {
-    p.vel = { x: 0, z: 0 };
-    return;
-  }
-  let w = p.waypoint;
-  if (!w || dist(p.pos, w) < 0.01) w = nextWaypoint(p, player);
-  p.waypoint = w;
-  const dx = w.x - p.pos.x,
-    dz = w.z - p.pos.z,
-    len = Math.hypot(dx, dz);
-  if (len < 0.01) {
-    p.vel = { x: 0, z: 0 };
-    return;
-  }
-  const amount = Math.min(15 * dt, len),
-    old = { ...p.pos };
-  p.pos.x += (dx / len) * amount;
-  p.pos.z += (dz / len) * amount;
-  p.vel = { x: (dx / len) * 15, z: (dz / len) * 15 };
-  p.heading = Math.atan2(p.vel.x, p.vel.z);
-  if (amount >= len - 1e-8) {
-    p.pos = { ...w };
-    p.waypoint = nextWaypoint(p, player);
-  }
-  road(p, old);
-}
 function collide(player: Car, other: Car, s: GameState) {
-  const min = 3.8,
+  const min = COLLISION_CLEARANCE,
     dx = player.pos.x - other.pos.x,
     dz = player.pos.z - other.pos.z;
   let d = Math.hypot(dx, dz);
@@ -311,8 +285,6 @@ function collide(player: Car, other: Car, s: GameState) {
     player.pos = playerCandidate;
     other.pos = otherCandidate;
   } else if (playerCanSeparate) {
-    // A building or boundary may trap the struck car. Give the player the
-    // available half of the separation instead of pushing into the obstacle.
     player.pos = playerCanFullSeparate ? playerFullCandidate : playerCandidate;
     other.pos = otherBefore;
   } else if (otherCanSeparate) {
@@ -328,8 +300,6 @@ function collide(player: Car, other: Car, s: GameState) {
   const movingPlayer = d < 0.25
     ? playerSpeed > 0.5 && !(sameDirection && otherSpeed > playerSpeed + 0.5)
     : dotToward(player.vel, impactDirection) > 0.5;
-  // Transfer forward momentum to the struck vehicle. The impulse is kept
-  // outside `vel` so traffic AI cannot erase it on its next steering update.
   const approach = Math.max(
     0,
     dotToward(
@@ -350,8 +320,6 @@ function collide(player: Car, other: Car, s: GameState) {
   }
   if (s.collisionTimer <= 0) {
     player.damage += 18;
-    // Preserve forward momentum; only remove velocity driving into the other
-    // car. This lets a held throttle gradually break a low-speed contact.
     const toward = dotToward(player.vel, impactDirection);
     if (toward > 0) {
       player.vel.x -= (impactDirection.x / Math.max(1e-6, Math.hypot(impactDirection.x, impactDirection.z))) * toward * 0.35;
@@ -397,7 +365,7 @@ export function step(s: GameState, input: Input, dt: number): GameState {
   drive(s.player, input, dt);
   road(s.player, old);
   updateTraffic(s.traffic, s.player, dt, (from, to) => !blocked(from, to) && isOnRoad(to), s.police);
-  if (s.wanted) for (const p of s.police) police(p, s.player, dt);
+  if (s.wanted) for (const p of s.police) updatePolice(p, s.player, dt, (from, to) => !blocked(from, to) && isOnRoad(to));
   else for (const p of s.police) p.vel = { x: 0, z: 0 };
   applyImpacts([...s.traffic, ...s.police], dt);
   const b = bridges.get(s);

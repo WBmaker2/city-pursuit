@@ -27,6 +27,8 @@ WASD 또는 방향키로 운전합니다. `S`는 감속·후진, `Shift`는 부�
 
 ## 에셋과 업데이트
 
+2026.09.09 — 도로 폭을 12m로 넓히고 네 방향 우측 차로, 차로 복귀, 교차로 기반 경찰 웨이포인트를 적용했습니다. 건물 반폭·차량 충돌 여유를 공통 치수로 맞추고, 늦은 오후 하늘·안개·환경광을 밝게 조정했습니다.
+
 생성된 atlas는 [public/assets/city-atlas-2026-09-09.png](./public/assets/city-atlas-2026-09-09.png)이며, 기존 [city-atlas.png](./public/assets/city-atlas.png)는 보존합니다. 체크포인트 데칼은 [checkpoint-decal-2026-09-09.png](./public/assets/checkpoint-decal-2026-09-09.png)입니다. 프롬프트와 provenance는 [docs/IMAGE-PROMPT.md](./docs/IMAGE-PROMPT.md), 상세 기록은 [docs/ASSETS.md](./docs/ASSETS.md)에 있습니다.
 
 2026.09.09 — 승인 후보: 새 도로·건물 외벽·차량 도장 atlas와 경로 방향 체크포인트 데칼을 추가했습니다. 데칼은 현재 다음 목표에만 표시됩니다.

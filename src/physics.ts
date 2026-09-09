@@ -1,4 +1,5 @@
 import RAPIER from "@dimforge/rapier2d-compat";
+import { BUILDING_HALF } from "./road-constants";
 
 export type PhysicsBridge = {
   world: RAPIER.World;
@@ -36,14 +37,14 @@ export async function createPhysicsBridge(): Promise<PhysicsBridge> {
     );
     world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy), body);
   }
-  // Matches world.ts: 8x8 buildings centred on non-road 11-unit tiles.
+  // Matches world.ts building footprint.
   for (let x = -77; x <= 77; x += 11)
     for (let z = -77; z <= 77; z += 11) {
       if (Math.abs(x % 22) < 6 || Math.abs(z % 22) < 6) continue;
       const body = world.createRigidBody(
         RAPIER.RigidBodyDesc.fixed().setTranslation(x, z),
       );
-      world.createCollider(RAPIER.ColliderDesc.cuboid(4, 4), body);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(BUILDING_HALF, BUILDING_HALF), body);
     }
   const carBodies: RAPIER.RigidBody[] = [];
   world.timestep = 1 / 60;

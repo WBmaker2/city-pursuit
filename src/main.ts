@@ -12,6 +12,7 @@ import {
   SPEEDING_THRESHOLD_SECONDS,
 } from "./simulation";
 import { carMesh, checkpointMesh, createWorld, setPoliceActive, syncObject } from "./world";
+import { ROAD } from "./road-constants";
 import "./style.css";
 
 const app = document.querySelector("#app") as HTMLElement;
@@ -26,7 +27,7 @@ if (modalCard) {
     )
     .replace(
       "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가",
-      "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가<br>2026.09.09 · 새 도로·외벽·차량 도장 atlas와 경로 방향 체크포인트 데칼 적용",
+      "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가<br>2026.09.09 · 새 도로·외벽·차량 도장 atlas와 경로 방향 체크포인트 데칼 적용<br>2026.09.09 · 도로 폭 확장·우측 통행·밝은 도시 조명 개선",
     );
 }
 app.querySelector(".start-card p:nth-of-type(2)")?.replaceChildren(
@@ -264,7 +265,7 @@ function drawMap() {
   context.fillStyle = "#12162b";
   context.fillRect(0, 0, 150, 150);
   context.strokeStyle = "#373b5b";
-  context.lineWidth = 4;
+  context.lineWidth = (ROAD / WORLD) * 62;
   for (let coordinate = -66; coordinate <= 66; coordinate += 22) {
     const pixel = 75 + (coordinate / WORLD) * 62;
     context.beginPath();

@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { ROAD, WORLD } from "./simulation";
+import { BUILDING_HALF } from "./road-constants";
 
 type Tile = { x: number; y: number };
 const surfaces: THREE.MeshStandardMaterial[] = [];
+const roadMaterials: THREE.MeshStandardMaterial[] = [];
+const facadeMaterials: THREE.MeshStandardMaterial[] = [];
 const checkpointDecalMaterial = new THREE.MeshBasicMaterial({
   color: 0xffffff,
   transparent: true,
@@ -66,10 +69,10 @@ function box(
 }
 
 export function createWorld(scene: THREE.Scene) {
-  scene.background = new THREE.Color(0x2b2342);
-  scene.fog = new THREE.Fog(0x2b2342, 72, 190);
-  scene.add(new THREE.HemisphereLight(0xffc79f, 0x182143, 1.8));
-  const sunset = new THREE.DirectionalLight(0xffa36f, 2.8);
+  scene.background = new THREE.Color(0x6d7895);
+  scene.fog = new THREE.Fog(0x6d7895, 92, 210);
+  scene.add(new THREE.HemisphereLight(0xffe1bd, 0x34415f, 2.4));
+  const sunset = new THREE.DirectionalLight(0xffc58c, 3.2);
   sunset.position.set(-45, 75, 32);
   sunset.castShadow = true;
   sunset.shadow.mapSize.set(2048, 2048);
@@ -79,8 +82,9 @@ export function createWorld(scene: THREE.Scene) {
   sunset.shadow.camera.bottom = -110;
   scene.add(sunset);
 
-  box(scene, 0, -1, 0, WORLD * 2.4, 1, WORLD * 2.4, mat(0x171b31));
-  const road = mat(0x30334a, 0.96);
+  box(scene, 0, -1, 0, WORLD * 2.4, 1, WORLD * 2.4, mat(0x28324b));
+  const road = mat(0xb8c2d0, 0.96);
+  roadMaterials.push(road);
   const lane = mat(0xf5b968, 0.5);
   for (let coordinate = -66; coordinate <= 66; coordinate += 22) {
     box(scene, coordinate, 0, 0, ROAD, 0.12, WORLD * 2, road);
@@ -91,26 +95,28 @@ export function createWorld(scene: THREE.Scene) {
     }
   }
 
-  const colors = [0x383b5a, 0x454263, 0x2e405e, 0x4a3956];
+  const colors = [0x9aa9bf, 0xaeb6c8, 0x879fb8, 0xb3a2bb];
   for (let x = -77; x <= 77; x += 11)
     for (let z = -77; z <= 77; z += 11) {
       if (Math.abs(x % 22) < 6 || Math.abs(z % 22) < 6) continue;
       const height = 8 + (Math.abs(x * 3 + z * 5) % 15);
       const building = new THREE.Group();
       building.position.set(x, 0, z);
+      const facade = mat(colors[Math.abs(x + z) % colors.length]);
+      facadeMaterials.push(facade);
       box(
         building,
         0,
         height / 2,
         0,
-        8,
+        BUILDING_HALF * 2,
         height,
-        8,
-        mat(colors[Math.abs(x + z) % colors.length]),
+        BUILDING_HALF * 2,
+        facade,
       );
       for (let y = 3; y < height - 1; y += 3) {
-        box(building, 0, y, -4.04, 5.8, 0.95, 0.08, mat(0x8dd6d1, 0.35, 0.1));
-        box(building, -4.04, y, 0, 0.08, 0.95, 5.8, mat(0x72bdc8, 0.35, 0.1));
+        box(building, 0, y, -BUILDING_HALF - 0.04, 5.2, 0.95, 0.08, mat(0x9fe6dd, 0.35, 0.1));
+        box(building, -BUILDING_HALF - 0.04, y, 0, 0.08, 0.95, 5.2, mat(0x8bd5de, 0.35, 0.1));
       }
       scene.add(building);
     }
@@ -124,7 +130,8 @@ export function createWorld(scene: THREE.Scene) {
     const paintTexture = cropAtlas(loaded.image, { x: 0, y: 1 }, 1, 1);
     for (const surface of surfaces) {
       const color = surface.color.getHex();
-      if (color === 0x30334a) surface.map = roadTexture ?? null;
+      if (roadMaterials.includes(surface)) surface.map = roadTexture ?? null;
+      if (facadeMaterials.includes(surface)) surface.map = facadeTexture ?? null;
       if (
         color === 0x383b5a ||
         color === 0x454263 ||
@@ -238,11 +245,11 @@ export function setPoliceActive(car: THREE.Object3D, active: boolean) {
 export function checkpointMesh() {
   const gate = new THREE.Group();
   const glow = mat(0xffb743, 0.24, 0.25);
-  box(gate, -3, 2, 0, 0.28, 4, 0.28, glow);
-  box(gate, 3, 2, 0, 0.28, 4, 0.28, glow);
-  box(gate, 0, 4, 0, 6.25, 0.28, 0.28, glow);
+  box(gate, -6.4, 2, 0, 0.28, 4, 0.28, glow);
+  box(gate, 6.4, 2, 0, 0.28, 4, 0.28, glow);
+  box(gate, 0, 4, 0, 13, 0.28, 0.28, glow);
   const decal = new THREE.Mesh(
-    new THREE.PlaneGeometry(6.4, 6.4),
+    new THREE.PlaneGeometry(13, 13),
     checkpointDecalMaterial,
   );
   decal.name = "checkpoint-decal";
