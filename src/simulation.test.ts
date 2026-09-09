@@ -5,6 +5,8 @@ import {
   advance,
   initPhysics,
   isOnRoad,
+  MAX_SPEED,
+  BOOST_SPEED,
 } from "./simulation";
 import { ROAD_HALF } from "./road-constants";
 const go = {
@@ -69,7 +71,7 @@ describe("City Pursuit simulation", () => {
       Math.hypot(boosted.player.vel.x, boosted.player.vel.z),
     ).toBeGreaterThan(Math.hypot(normal.player.vel.x, normal.player.vel.z));
   });
-  it("ordinary player speed clears police cruise while boost reaches a second tier", () => {
+  it("ordinary player speed clears NPC cruise while staying capped, and boost reaches a second tier", () => {
     const normal = createState();
     normal.traffic = [];
     normal.police = [];
@@ -82,8 +84,12 @@ describe("City Pursuit simulation", () => {
     boosted.player.pos = { x: 66, z: 66 };
     advance(boosted, { ...go, boost: true }, 4);
     const boostedSpeed = Math.hypot(boosted.player.vel.x, boosted.player.vel.z);
-    expect(normalSpeed).toBeGreaterThan(15);
+    expect(normalSpeed).toBeGreaterThan(10);
+    expect(normalSpeed).toBeLessThanOrEqual(MAX_SPEED + 0.01);
+    expect(boostedSpeed).toBeGreaterThan(BOOST_SPEED - 1);
     expect(boostedSpeed).toBeGreaterThan(normalSpeed + 4);
+    advance(boosted, { ...go, boost: false }, 0.2);
+    expect(Math.hypot(boosted.player.vel.x, boosted.player.vel.z)).toBeLessThanOrEqual(MAX_SPEED + 0.01);
   });
   it("pushes an NPC over several frames without reversing player momentum", () => {
     const s = createState();
@@ -239,15 +245,9 @@ describe("City Pursuit simulation", () => {
     s.traffic = [];
     s.player.vel = { x: 0, z: 16 };
     s.player.pos = { x: 0, z: 44 };
-    for (let i = 0; i < 84; i++) {
-      s.player.vel = { x: 0, z: 16 };
-      step(s, { ...go, up: false }, 1 / 60);
-    }
+    advance(s, { ...go, boost: true }, 1.4);
     expect(s.wanted).toBe(false);
-    for (let i = 0; i < 12; i++) {
-      s.player.vel = { x: 0, z: 16 };
-      step(s, { ...go, up: false }, 1 / 60);
-    }
+    advance(s, { ...go, boost: true }, 1);
     expect(s.wantedReason).toBe("speeding");
     const alert = s.alertTime;
     advance(s, { ...go, up: false }, 1);

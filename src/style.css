@@ -171,15 +171,18 @@ canvas {
   align-items: center;
   gap: 3px;
 }
-.legend-dot {
+.legend-arrow {
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid currentColor;
+  transform: rotate(90deg);
 }
-.legend-player { background: #23ddd0; }
-.legend-traffic { background: #d8f7ff; }
-.legend-police { background: #ff4769; }
+.legend-player { color: #23ddd0; }
+.legend-traffic { color: #d8f7ff; }
+.legend-police { color: #ff4769; }
 .meters {
   display: flex;
   justify-content: space-between;
@@ -191,10 +194,15 @@ canvas {
   color: #4de0cc;
   font: 800 19px "Barlow Condensed";
 }
-.help {
+.help-actions {
   position: fixed;
   right: 24px;
   bottom: 24px;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.help {
   padding: 10px 15px;
 }
 .start-card,
@@ -273,6 +281,7 @@ h1 em {
 }
 .modal,
 .result {
+  position: fixed;
   display: grid;
   place-items: center;
   inset: 0;
@@ -293,6 +302,8 @@ h1 em {
 }
 .modal-card {
   position: relative;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
   line-height: 1.7;
   font-size: 13px;
 }
@@ -318,6 +329,24 @@ h1 em {
   color: #aaaabd;
   font-size: 24px;
   cursor: pointer;
+}
+.modal-tabs {
+  display: flex;
+  gap: 7px;
+  margin: 4px 0 14px;
+}
+.modal-tabs button {
+  border: 1px solid #5d6080;
+  border-radius: 5px;
+  background: #15182f;
+  color: #aaaabd;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.modal-tabs button[aria-selected="true"] {
+  border-color: #25d8d0;
+  color: #25d8d0;
 }
 .result {
   place-items: start;
@@ -407,10 +436,13 @@ h1 em {
     min-width: 180px;
   }
   .wanted-panel { top: 296px; }
-  .help {
+  .help-actions {
     right: 14px;
     bottom: 218px;
+  }
+  .help {
     font-size: 11px;
+    padding: 9px 10px;
   }
   .start-card {
     left: 14px;

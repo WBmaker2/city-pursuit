@@ -57,7 +57,8 @@ export type GameState = {
   clearMessageTime: number;
 };
 export { WORLD, ROAD, GRID } from "./road-constants";
-export const MAX_SPEED = 25;
+export const MAX_SPEED = 12;
+export const BOOST_SPEED = 34;
 export const SPEED_LIMIT_KMH = 120,
   SPEEDING_THRESHOLD_SECONDS = 1.5,
   WANTED_DISTANCE = 42,
@@ -197,7 +198,7 @@ function drive(c: Car, i: Input, dt: number) {
     signed = c.vel.x * f.x + c.vel.z * f.z,
     brake = i.down && signed > 0.3,
     throttle = i.up ? 1 : i.down && signed <= 0.3 ? -0.55 : 0,
-    acc = c.isPolice ? 12 : i.boost && i.up ? 36 : 28;
+    acc = c.isPolice ? 12 : i.boost && i.up ? 55 : 28;
   c.vel.x += f.x * throttle * acc * dt;
   c.vel.z += f.z * throttle * acc * dt;
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0),
@@ -208,7 +209,7 @@ function drive(c: Car, i: Input, dt: number) {
   c.vel.x *= Math.max(0, 1 - drag * dt);
   c.vel.z *= Math.max(0, 1 - drag * dt);
   if (brake && speed < 0.5) c.vel.x = c.vel.z = 0;
-  const max = c.isPolice ? 20 : i.boost && i.up ? 34 : MAX_SPEED,
+  const max = c.isPolice ? 20 : i.boost && i.up ? BOOST_SPEED : MAX_SPEED,
     m = Math.hypot(c.vel.x, c.vel.z);
   if (m > max) {
     c.vel.x *= max / m;
