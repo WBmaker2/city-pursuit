@@ -27,7 +27,9 @@ WASD 또는 방향키로 운전합니다. `S`는 감속·후진, `Shift`는 부�
 
 ## 에셋과 업데이트
 
-생성된 atlas는 [public/assets/city-atlas.png](./public/assets/city-atlas.png)이며, 프롬프트와 provenance는 [docs/IMAGE-PROMPT.md](./docs/IMAGE-PROMPT.md), 상세 기록은 [docs/ASSETS.md](./docs/ASSETS.md)에 있습니다.
+생성된 atlas는 [public/assets/city-atlas-2026-09-09.png](./public/assets/city-atlas-2026-09-09.png)이며, 기존 [city-atlas.png](./public/assets/city-atlas.png)는 보존합니다. 체크포인트 데칼은 [checkpoint-decal-2026-09-09.png](./public/assets/checkpoint-decal-2026-09-09.png)입니다. 프롬프트와 provenance는 [docs/IMAGE-PROMPT.md](./docs/IMAGE-PROMPT.md), 상세 기록은 [docs/ASSETS.md](./docs/ASSETS.md)에 있습니다.
+
+2026.09.09 — 승인 후보: 새 도로·건물 외벽·차량 도장 atlas와 경로 방향 체크포인트 데칼을 추가했습니다. 데칼은 현재 다음 목표에만 표시됩니다.
 
 2026.09.08 — 첫 공개: 도시 그리드, 운전 물리, 교통·경찰 추격, 순서형 체크포인트, 점수·데미지·미니맵 HUD, 모바일 조작. ChatGPT 이미지 생성 모델의 atlas를 도로·외벽·차량 재질에 적용했습니다.
 

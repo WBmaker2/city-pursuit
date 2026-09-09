@@ -3,6 +3,13 @@ import { ROAD, WORLD } from "./simulation";
 
 type Tile = { x: number; y: number };
 const surfaces: THREE.MeshStandardMaterial[] = [];
+const checkpointDecalMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.9,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
 
 function mat(color: number, roughness = 0.8, metalness = 0.05) {
   const value = new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -108,7 +115,9 @@ export function createWorld(scene: THREE.Scene) {
       scene.add(building);
     }
 
-  new THREE.TextureLoader().load("./assets/city-atlas.png", (loaded) => {
+  scene.userData.atlasSource = "./assets/city-atlas-2026-09-09.png";
+  scene.userData.decalReady = false;
+  new THREE.TextureLoader().load(scene.userData.atlasSource, (loaded) => {
     scene.userData.atlasReady = true;
     const roadTexture = cropAtlas(loaded.image, { x: 0, y: 0 }, 2, 30);
     const facadeTexture = cropAtlas(loaded.image, { x: 1, y: 0 }, 2, 2);
@@ -134,6 +143,15 @@ export function createWorld(scene: THREE.Scene) {
       surface.needsUpdate = true;
     }
   });
+  new THREE.TextureLoader().load(
+    "./assets/checkpoint-decal-2026-09-09.png",
+    (loaded) => {
+      loaded.colorSpace = THREE.SRGBColorSpace;
+      checkpointDecalMaterial.map = loaded;
+      checkpointDecalMaterial.needsUpdate = true;
+      scene.userData.decalReady = true;
+    },
+  );
 }
 
 function wheel(car: THREE.Group, x: number, z: number) {
@@ -223,6 +241,15 @@ export function checkpointMesh() {
   box(gate, -3, 2, 0, 0.28, 4, 0.28, glow);
   box(gate, 3, 2, 0, 0.28, 4, 0.28, glow);
   box(gate, 0, 4, 0, 6.25, 0.28, 0.28, glow);
+  const decal = new THREE.Mesh(
+    new THREE.PlaneGeometry(6.4, 6.4),
+    checkpointDecalMaterial,
+  );
+  decal.name = "checkpoint-decal";
+  decal.rotation.x = -Math.PI / 2;
+  decal.position.y = 0.13;
+  gate.add(decal);
+  gate.userData.decal = decal;
   return gate;
 }
 

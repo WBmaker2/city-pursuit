@@ -82,3 +82,12 @@ git push -u origin main
 - production preview QA: NPC `z=30→15.3`, 경찰 `z=30→15.0`, 상대 `z=26.5→11.5/11.2`, damage `36`, player alive
 - production preview QA: W+Shift `25.0253u/s` (`200.2024km/h`), damage `0`; Shift 해제 후 S `0.5초` 제동으로 `0.6855u/s`, history에 전진 운동량 유지 표시
 - `npm test` 38/38, `npm run build` 성공
+
+### 2026-09-09 승인 에셋 후속
+
+- 승인 후보 atlas와 투명 체크포인트 데칼을 버전 있는 공개 경로에 원본 그대로 추가
+- 새 atlas를 시작 카드·도로·건물 외벽·차량 도장에 적용하고 기존 atlas 보존
+- 공유 투명 데칼을 현재 다음 체크포인트에만 표시하고 격자 경로 방향으로 회전
+- `npm test` 38/38, `npm run build` 성공
+- production preview에서 `atlasReady`, 새 atlas 경로, `decalReady`, 공유 텍스처 5개와 체크포인트 전환을 진단 훅으로 확인
+- 별도 실제 W 주행에서 `z=22→13.035`, damage `0` 확인

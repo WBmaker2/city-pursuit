@@ -23,6 +23,10 @@ if (modalCard) {
     .replace(
       "업데이트 내역 · 2026.09.08<br>위반 후 경찰 추격과 도주 HUD 추가",
       "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가",
+    )
+    .replace(
+      "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가",
+      "업데이트 내역 · 2026.09.08<br>플레이어 가속·최고속도와 부스트 돌파력 강화<br>충돌 시 차량을 밀어내고 전진 운동량 유지<br>미니맵에 일반 차량 위치·진행 방향 표시 추가<br>NPC 예측 제동·교차 양보·안전 간격 회피 추가<br>위반 후 경찰 추격과 도주 HUD 추가<br>2026.09.09 · 새 도로·외벽·차량 도장 atlas와 경로 방향 체크포인트 데칼 적용",
     );
 }
 app.querySelector(".start-card p:nth-of-type(2)")?.replaceChildren(
@@ -335,6 +339,17 @@ function showResult() {
 let last = performance.now();
 let accumulator = 0;
 let manualMode = false;
+function checkpointDecalRotation(index: number) {
+  const target = state.checkpoints[index].pos;
+  const previous = index === 0 ? { x: 0, z: 66 } : state.checkpoints[index - 1].pos;
+  const dx = target.x - previous.x;
+  const dz = target.z - previous.z;
+  // The final leg is diagonal in data, but the city route is orthogonal: use
+  // its Z leg for a readable road-aligned arrow.
+  const routeX = dz === 0 ? Math.sign(dx) : 0;
+  const routeZ = dz === 0 ? 0 : Math.sign(dz);
+  return Math.atan2(routeX, routeZ) + Math.PI;
+}
 function syncView() {
   syncObject(player, state.player.pos, state.player.heading);
   state.traffic.forEach((car, index) =>
@@ -348,6 +363,7 @@ function syncView() {
   state.checkpoints.forEach((checkpoint, index) => {
     checkpoints[index].visible = index === next;
     syncObject(checkpoints[index], checkpoint.pos, 0);
+    checkpoints[index].rotation.y = checkpointDecalRotation(index);
   });
   const forward = {
     x: Math.sin(state.player.heading),
@@ -415,6 +431,21 @@ if (location.search.includes("debug")) {
     triangles: renderer.info.render.triangles,
     textures: renderer.info.memory.textures,
     atlasReady: Boolean(scene.userData.atlasReady),
+    atlasSource: scene.userData.atlasSource,
+    decalReady: Boolean(scene.userData.decalReady),
+    visibleCheckpointDecal: (() => {
+      const index = state.checkpoints.findIndex((entry) => !entry.reached);
+      if (index < 0) return null;
+      const gate = checkpoints[index];
+      const decal = gate.userData.decal as THREE.Mesh;
+      return {
+        index,
+        position: { x: gate.position.x, y: decal.position.y, z: gate.position.z },
+        rotationY: gate.rotation.y,
+        opacity: (decal.material as THREE.MeshBasicMaterial).opacity,
+        visible: decal.visible && gate.visible,
+      };
+    })(),
   });
   (window as any).setManualMode = (enabled: boolean) => {
     manualMode = enabled;

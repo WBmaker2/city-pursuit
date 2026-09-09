@@ -2,7 +2,7 @@
 
 ## Automated
 
-`npm test` — simulation tests 32/32 passed in this checkout, including the traffic avoidance regression suite.
+`npm test` — simulation tests 38/38 passed in this checkout, including the traffic avoidance regression suite.
 
 `npm run build` — TypeScript and Vite production build passed. The generated JavaScript bundle is about 2.6 MB (923 KB gzip); Vite reports this as a size warning.
 
@@ -28,4 +28,6 @@ Diagnostic state injection was used only for collision, timeout, and complete-mi
 
 ## Assets
 
-`public/assets/city-atlas.png` was generated with the ChatGPT built-in image generation model. The renderer crops its four quadrants in-browser and shares sRGB CanvasTextures for the road, facade, and vehicle paint materials.
+The 2026.09.09 candidate atlas and transparent checkpoint decal were verified in the production preview. `graphicsStats()` reported `atlasReady=true`, `atlasSource=./assets/city-atlas-2026-09-09.png`, `decalReady=true`, and five textures with the shared decal material. The initial visible decal was at `(0, 0.13, 22)` with rotation `2π`; after diagnostic checkpoint collection, checkpoint 2 became visible at `(44, 0.13, 22)` with rotation `1.5π`. A separate live `W` run moved the player from `z=22` to `z=13.035` with zero damage. These diagnostic checkpoint and manual driving checks are reported separately; this is not screenshot-based QA.
+
+`public/assets/city-atlas-2026-09-09.png` was generated with the ChatGPT built-in image generation model. The renderer crops its four quadrants in-browser and shares sRGB CanvasTextures for the road, facade, and vehicle paint materials. The previous `public/assets/city-atlas.png` remains preserved.

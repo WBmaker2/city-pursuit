@@ -220,7 +220,7 @@ canvas {
   inset: 0 0 0 58%;
   z-index: -1;
   opacity: 0.22;
-  background: url("/assets/city-atlas.png") right bottom / 200% 200% no-repeat;
+  background: url("/assets/city-atlas-2026-09-09.png") right bottom / 200% 200% no-repeat;
   mix-blend-mode: screen;
 }
 .eyebrow {
