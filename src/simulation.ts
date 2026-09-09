@@ -204,7 +204,7 @@ function drive(c: Car, i: Input, dt: number) {
   const turn = (i.left ? 1 : 0) - (i.right ? 1 : 0),
     sign = signed < -0.1 ? -1 : 1;
   c.heading +=
-    turn * sign * (i.handbrake ? 2.7 : 1.8) * clamp(speed / 8, 0, 1) * dt;
+    turn * sign * (i.handbrake ? 2.7 : 1.44) * clamp(speed / 8, 0, 1) * dt;
   const drag = i.handbrake ? 5 : brake ? 7 : 1.4;
   c.vel.x *= Math.max(0, 1 - drag * dt);
   c.vel.z *= Math.max(0, 1 - drag * dt);

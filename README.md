@@ -29,6 +29,8 @@ WASD 또는 방향키로 운전합니다. 일반 주행은 `96km/h`, `W+Shift` �
 
 2026.09.09 — 조작법 안내와 업데이트 내역을 별도 버튼으로 제공하고, 모달 키보드 조작과 모바일 화면 대응을 개선했습니다.
 
+2026.09.09 — 좌우 방향키와 A/D의 일반 회전 민감도를 20% 낮춰 더 부드럽게 조정했습니다. 핸드브레이크 회전은 유지됩니다.
+
 2026.09.09 — 도로 폭을 12m로 넓히고 네 방향 우측 차로, 차로 복귀, 교차로 기반 경찰 웨이포인트를 적용했습니다. 건물 반폭·차량 충돌 여유를 공통 치수로 맞추고, 늦은 오후 하늘·안개·환경광을 밝게 조정했습니다.
 
 생성된 atlas는 [public/assets/city-atlas-2026-09-09.png](./public/assets/city-atlas-2026-09-09.png)이며, 기존 [city-atlas.png](./public/assets/city-atlas.png)는 보존합니다. 체크포인트 데칼은 [checkpoint-decal-2026-09-09.png](./public/assets/checkpoint-decal-2026-09-09.png)입니다. 프롬프트와 provenance는 [docs/IMAGE-PROMPT.md](./docs/IMAGE-PROMPT.md), 상세 기록은 [docs/ASSETS.md](./docs/ASSETS.md)에 있습니다.

@@ -112,3 +112,9 @@ git push -u origin main
 - 실제 QA: 390×844와 740×360 모달, W `96km/h`, W+Shift `272km/h`, Shift 해제 `96km/h`, overflow 없음
 - 속도 진단은 NPC·경찰 제거 및 초기 위치 주입을 사용했으며, 이전 플레이어 파워 수치는 이전 릴리스 측정으로 유지
 - `npm test` 45/45, `npm run build` 성공
+
+### 2026-09-09 조향 민감도 후속
+
+- 좌우 방향키와 A/D의 일반 조향 속도를 `1.8→1.44rad/s`로 20% 완화하고 핸드브레이크 조향은 유지
+- 동일 초기 상태와 200ms ArrowLeft 진단에서 회전량 `0.36rad→0.288rad`(`20.62648°→16.50118°`), ArrowRight 대칭 확인
+- `npm test` 45/45, `npm run build` 성공
